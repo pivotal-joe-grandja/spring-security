@@ -71,10 +71,10 @@ public final class InMemoryOAuth2AuthorizedClientService implements OAuth2Author
 	public <T extends OAuth2AuthorizedClient> T loadAuthorizedClient(String clientRegistrationId, String principalName) {
 		Assert.hasText(clientRegistrationId, "clientRegistrationId cannot be empty");
 		Assert.hasText(principalName, "principalName cannot be empty");
-		ClientRegistration registration = this.clientRegistrationRepository.findByRegistrationId(clientRegistrationId);
-		if (registration == null) {
-			return null;
-		}
+//		ClientRegistration registration = this.clientRegistrationRepository.findByRegistrationId(clientRegistrationId);
+//		if (registration == null) {
+//			return null;
+//		}
 		return (T) this.authorizedClients.get(new OAuth2AuthorizedClientId(clientRegistrationId, principalName));
 	}
 
