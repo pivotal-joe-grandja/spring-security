@@ -439,7 +439,16 @@ form-login.attlist &=
 
 oauth2-login =
 	## Configures authentication support using an OAuth 2.0 and/or OpenID Connect 1.0 Provider.
-	element oauth2-login {empty}
+	element oauth2-login {oauth2-login.attlist}
+oauth2-login.attlist &=
+	## Reference to OAuth2AccessTokenResponseClient
+	attribute tokenendpoint-access-token-response-client-ref {xsd:token}?
+oauth2-login.attlist &=
+	## Reference to OAuth2UserService
+	attribute userinfo-user-service-ref {xsd:token}?
+oauth2-login.attlist &=
+	## Reference to OidcUserService
+	attribute userinfo-oidc-user-service-ref {xsd:token}?
 
 client-registrations =
 	## Container element for client(s) registered with an OAuth 2.0 or OpenID Connect 1.0 Provider.

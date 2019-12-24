@@ -1456,8 +1456,30 @@
          <xs:documentation>Configures authentication support using an OAuth 2.0 and/or OpenID Connect 1.0 Provider.
                 </xs:documentation>
       </xs:annotation>
-      <xs:complexType/>
+      <xs:complexType>
+         <xs:attributeGroup ref="security:oauth2-login.attlist"/>
+      </xs:complexType>
    </xs:element>
+   <xs:attributeGroup name="oauth2-login.attlist">
+      <xs:attribute name="tokenendpoint-access-token-response-client-ref" type="xs:token">
+         <xs:annotation>
+            <xs:documentation>Reference to OAuth2AccessTokenResponseClient
+                </xs:documentation>
+         </xs:annotation>
+      </xs:attribute>
+      <xs:attribute name="userinfo-user-service-ref" type="xs:token">
+         <xs:annotation>
+            <xs:documentation>Reference to OAuth2UserService
+                </xs:documentation>
+         </xs:annotation>
+      </xs:attribute>
+      <xs:attribute name="userinfo-oidc-user-service-ref" type="xs:token">
+         <xs:annotation>
+            <xs:documentation>Reference to OidcUserService
+                </xs:documentation>
+         </xs:annotation>
+      </xs:attribute>
+  </xs:attributeGroup>
   <xs:element name="client-registrations">
       <xs:annotation>
          <xs:documentation>Container element for client(s) registered with an OAuth 2.0 or OpenID Connect 1.0
