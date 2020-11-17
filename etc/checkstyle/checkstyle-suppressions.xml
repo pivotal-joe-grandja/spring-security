@@ -17,6 +17,7 @@
 
 	<!-- InterfaceIsType rules we can't fix until a major revision due to back compatibility -->
 	<suppress files="JwsAlgorithms\.java" checks="InterfaceIsType"/>
+	<suppress files="JoseHeaderNames\.java" checks="InterfaceIsType"/>
 	<suppress files="JwtClaimNames\.java" checks="InterfaceIsType"/>
 	<suppress files="OAuth2ErrorCodes\.java" checks="InterfaceIsType"/>
 	<suppress files="OAuth2ParameterNames\.java" checks="InterfaceIsType"/>
