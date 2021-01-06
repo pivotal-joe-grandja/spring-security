@@ -24,6 +24,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import com.nimbusds.jose.JOSEException;
@@ -33,6 +36,9 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.crypto.factories.DefaultJWSSignerFactory;
 import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.JWKMatcher;
+import com.nimbusds.jose.jwk.JWKSelector;
+import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.produce.JWSSignerFactory;
 import com.nimbusds.jose.util.Base64;
 import com.nimbusds.jose.util.Base64URL;
@@ -47,7 +53,8 @@ import org.springframework.util.StringUtils;
 /**
  * An implementation of a {@link JwtEncoder} that encodes a JSON Web Token (JWT) using the
  * JSON Web Signature (JWS) Compact Serialization format. The private/secret key used for
- * signing the JWS is provided via the constructor as a {@code com.nimbusds.jose.jwk.JWK}.
+ * signing the JWS is supplied by the {@code com.nimbusds.jose.jwk.JWK} selector provided
+ * via the constructor.
  *
  * <p>
  * <b>NOTE:</b> This implementation uses the Nimbus JOSE + JWT SDK.
@@ -56,7 +63,6 @@ import org.springframework.util.StringUtils;
  * @since 5.5
  * @see JwtEncoder
  * @see com.nimbusds.jose.jwk.JWK
- * @see NimbusJwsEncoderFactory
  * @see <a target="_blank" href="https://tools.ietf.org/html/rfc7519">JSON Web Token
  * (JWT)</a>
  * @see <a target="_blank" href="https://tools.ietf.org/html/rfc7515">JSON Web Signature
@@ -76,20 +82,17 @@ public final class NimbusJwsEncoder implements JwtEncoder {
 
 	private static final JWSSignerFactory JWS_SIGNER_FACTORY = new DefaultJWSSignerFactory();
 
-	private final JWK jwk;
+	private final Map<JWK, JWSSigner> jwsSigners = new ConcurrentHashMap<>();
 
-	private final JWSSigner jwsSigner;
+	private final Function<JoseHeader, JWK> jwkSelector;
 
 	/**
 	 * Constructs a {@code NimbusJwsEncoder} using the provided parameters.
-	 * @param jwk the {@code com.nimbusds.jose.jwk.JWK}
+	 * @param jwkSelector the {@code com.nimbusds.jose.jwk.JWK} selector
 	 */
-	public NimbusJwsEncoder(JWK jwk) throws JOSEException {
-		Assert.notNull(jwk, "jwk cannot be null");
-		Assert.isTrue(jwk.isPrivate(), "jwk must be a private/secret key");
-		Assert.hasText(jwk.getKeyID(), "jwk.kid cannot be empty");
-		this.jwk = jwk;
-		this.jwsSigner = JWS_SIGNER_FACTORY.createJWSSigner(this.jwk);
+	public NimbusJwsEncoder(Function<JoseHeader, JWK> jwkSelector) {
+		Assert.notNull(jwkSelector, "jwkSelector cannot be null");
+		this.jwkSelector = jwkSelector;
 	}
 
 	@Override
@@ -97,10 +100,30 @@ public final class NimbusJwsEncoder implements JwtEncoder {
 		Assert.notNull(headers, "headers cannot be null");
 		Assert.notNull(claims, "claims cannot be null");
 
+		JWK jwk = this.jwkSelector.apply(headers);
+		if (jwk == null) {
+			throw new JwtEncodingException(
+					String.format(ENCODING_ERROR_MESSAGE_TEMPLATE, "Failed to select a JWK signing key"));
+		}
+		else if (!StringUtils.hasText(jwk.getKeyID())) {
+			throw new JwtEncodingException(String.format(ENCODING_ERROR_MESSAGE_TEMPLATE,
+					"The \"kid\" (key ID) from the selected JWK cannot be empty"));
+		}
+
+		JWSSigner jwsSigner = this.jwsSigners.computeIfAbsent(jwk, (key) -> {
+			try {
+				return JWS_SIGNER_FACTORY.createJWSSigner(key);
+			}
+			catch (JOSEException ex) {
+				throw new JwtEncodingException(String.format(ENCODING_ERROR_MESSAGE_TEMPLATE,
+						"Failed to create a JWS Signer -> " + ex.getMessage()), ex);
+			}
+		});
+
 		// @formatter:off
 		headers = JoseHeader.from(headers)
 				.type(JOSEObjectType.JWT.getType())
-				.keyId(this.jwk.getKeyID())
+				.keyId(jwk.getKeyID())
 				.build();
 		// @formatter:on
 		JWSHeader jwsHeader = JWS_HEADER_CONVERTER.convert(headers);
@@ -112,16 +135,52 @@ public final class NimbusJwsEncoder implements JwtEncoder {
 		// @formatter:on
 		JWTClaimsSet jwtClaimsSet = JWT_CLAIMS_SET_CONVERTER.convert(claims);
 
-		SignedJWT signedJWT = new SignedJWT(jwsHeader, jwtClaimsSet);
+		SignedJWT signedJwt = new SignedJWT(jwsHeader, jwtClaimsSet);
 		try {
-			signedJWT.sign(this.jwsSigner);
+			signedJwt.sign(jwsSigner);
 		}
 		catch (JOSEException ex) {
-			throw new JwtEncodingException(String.format(ENCODING_ERROR_MESSAGE_TEMPLATE, ex.getMessage()), ex);
+			throw new JwtEncodingException(
+					String.format(ENCODING_ERROR_MESSAGE_TEMPLATE, "Failed to sign the JWT -> " + ex.getMessage()), ex);
 		}
-		String jws = signedJWT.serialize();
+		String jws = signedJwt.serialize();
 
 		return new Jwt(jws, claims.getIssuedAt(), claims.getExpiresAt(), headers.getHeaders(), claims.getClaims());
+	}
+
+	/**
+	 * The default {@code com.nimbusds.jose.jwk.JWK} selector that matches on the
+	 * {@link JoseHeader#getAlgorithm() JWS algorithm}.
+	 */
+	public static final class DefaultJwkSelector implements Function<JoseHeader, JWK> {
+
+		private final Supplier<JWKSet> jwkSetProvider;
+
+		/**
+		 * Constructs a {@code DefaultJwkSelector} using the provided parameters.
+		 * @param jwkSetProvider a {@code Supplier} of
+		 * {@code com.nimbusds.jose.jwk.JWKSet}
+		 */
+		public DefaultJwkSelector(Supplier<JWKSet> jwkSetProvider) {
+			Assert.notNull(jwkSetProvider, "jwkSetProvider cannot be null");
+			this.jwkSetProvider = jwkSetProvider;
+		}
+
+		@Override
+		public JWK apply(JoseHeader headers) {
+			Assert.notNull(headers, "headers cannot be null");
+
+			JWSAlgorithm jwsAlgorithm = JWSAlgorithm.parse(headers.getAlgorithm().getName());
+			JWSHeader jwsHeader = new JWSHeader(jwsAlgorithm);
+			JWKSelector jwkSelector = new JWKSelector(JWKMatcher.forJWSHeader(jwsHeader));
+			List<JWK> jwks = jwkSelector.select(this.jwkSetProvider.get());
+			if (jwks.size() > 1) {
+				throw new JwtEncodingException(String.format(ENCODING_ERROR_MESSAGE_TEMPLATE,
+						"Found multiple JWK signing keys for algorithm '" + jwsAlgorithm.getName() + "'"));
+			}
+			return !jwks.isEmpty() ? jwks.get(0) : null;
+		}
+
 	}
 
 	private static class JwsHeaderConverter implements Converter<JoseHeader, JWSHeader> {

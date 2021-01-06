@@ -116,6 +116,8 @@ public final class TestKeys {
 		}
 	}
 
+	public static final KeyPair DEFAULT_RSA_KEY_PAIR = new KeyPair(DEFAULT_PUBLIC_KEY, DEFAULT_PRIVATE_KEY);
+
 	public static final KeyPair DEFAULT_EC_KEY_PAIR = generateEcKeyPair();
 
 	static KeyPair generateEcKeyPair() {
