@@ -146,11 +146,7 @@ public class NimbusJwsEncoderTests {
 
 		given(this.jwkSelector.apply(any())).willReturn(rsaJwk);
 
-		// @formatter:off
-		JoseHeader joseHeader = TestJoseHeaders.joseHeader()
-				.headers((headers) -> headers.remove(JoseHeaderNames.CRIT))
-				.build();
-		// @formatter:on
+		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
 		JwtClaimsSet jwtClaimsSet = TestJwtClaimsSets.jwtClaimsSet().build();
 
 		Jwt encodedJws = this.jwsEncoder.encode(joseHeader, jwtClaimsSet);
@@ -214,11 +210,7 @@ public class NimbusJwsEncoderTests {
 
 		NimbusJwsEncoder jwsEncoder = new NimbusJwsEncoder(jwkSelectorDelegate);
 
-		// @formatter:off
-		JoseHeader joseHeader = TestJoseHeaders.joseHeader()
-				.headers((headers) -> headers.remove(JoseHeaderNames.CRIT))
-				.build();
-		// @formatter:on
+		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
 		JwtClaimsSet jwtClaimsSet = TestJwtClaimsSets.jwtClaimsSet().build();
 
 		Jwt encodedJws = jwsEncoder.encode(joseHeader, jwtClaimsSet);

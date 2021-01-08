@@ -50,7 +50,6 @@ public class JoseHeaderTests {
 				.x509CertificateChain(expectedJoseHeader.getX509CertificateChain())
 				.x509SHA1Thumbprint(expectedJoseHeader.getX509SHA1Thumbprint())
 				.x509SHA256Thumbprint(expectedJoseHeader.getX509SHA256Thumbprint())
-				.critical(expectedJoseHeader.getCritical())
 				.type(expectedJoseHeader.getType())
 				.contentType(expectedJoseHeader.getContentType())
 				.headers((headers) -> headers.put("custom-header-name", "custom-header-value"))
@@ -65,7 +64,6 @@ public class JoseHeaderTests {
 		assertThat(joseHeader.getX509CertificateChain()).isEqualTo(expectedJoseHeader.getX509CertificateChain());
 		assertThat(joseHeader.getX509SHA1Thumbprint()).isEqualTo(expectedJoseHeader.getX509SHA1Thumbprint());
 		assertThat(joseHeader.getX509SHA256Thumbprint()).isEqualTo(expectedJoseHeader.getX509SHA256Thumbprint());
-		assertThat(joseHeader.getCritical()).isEqualTo(expectedJoseHeader.getCritical());
 		assertThat(joseHeader.getType()).isEqualTo(expectedJoseHeader.getType());
 		assertThat(joseHeader.getContentType()).isEqualTo(expectedJoseHeader.getContentType());
 		assertThat(joseHeader.<String>getHeader("custom-header-name")).isEqualTo("custom-header-value");

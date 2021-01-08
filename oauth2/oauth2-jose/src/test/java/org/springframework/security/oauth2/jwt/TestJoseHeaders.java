@@ -17,7 +17,6 @@
 package org.springframework.security.oauth2.jwt;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -45,7 +44,6 @@ public final class TestJoseHeaders {
 				.x509CertificateChain(Arrays.asList("x509Cert1", "x509Cert2"))
 				.x509SHA1Thumbprint("x509SHA1Thumbprint")
 				.x509SHA256Thumbprint("x509SHA256Thumbprint")
-				.critical(Collections.singleton("custom-header-name"))
 				.type("JWT")
 				.contentType("jwt-content-type")
 				.header("custom-header-name", "custom-header-value");
