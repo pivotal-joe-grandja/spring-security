@@ -16,28 +16,25 @@
 
 package org.springframework.security.oauth2.jwt;
 
-import java.security.KeyPair;
+import java.security.interfaces.ECPrivateKey;
+import java.security.interfaces.ECPublicKey;
 import java.util.Arrays;
-import java.util.LinkedHashSet;
-import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import javax.crypto.SecretKey;
-
+import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.KeyUse;
+import com.nimbusds.jose.jwk.OctetSequenceKey;
 import com.nimbusds.jose.jwk.RSAKey;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import org.springframework.core.convert.converter.Converter;
-import org.springframework.security.crypto.key.KeySource;
-import org.springframework.security.oauth2.jose.NimbusKeySourceJWKSetConverter;
+import org.springframework.security.oauth2.jose.TestJwks;
 import org.springframework.security.oauth2.jose.TestKeys;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -108,8 +105,8 @@ public class NimbusJwsEncoderTests {
 	@Test
 	public void encodeWhenJwkKidNullThenThrowJwtEncodingException() {
 		// @formatter:off
-		RSAKey rsaJwk = new RSAKey.Builder(TestKeys.DEFAULT_PUBLIC_KEY)
-				.privateKey(TestKeys.DEFAULT_PRIVATE_KEY)
+		RSAKey rsaJwk = TestJwks.jwk(TestKeys.DEFAULT_PUBLIC_KEY, TestKeys.DEFAULT_PRIVATE_KEY)
+				.keyID(null)
 				.build();
 		// @formatter:on
 
@@ -126,9 +123,7 @@ public class NimbusJwsEncoderTests {
 	@Test
 	public void encodeWhenJwkUseEncryptionThenThrowJwtEncodingException() {
 		// @formatter:off
-		RSAKey rsaJwk = new RSAKey.Builder(TestKeys.DEFAULT_PUBLIC_KEY)
-				.privateKey(TestKeys.DEFAULT_PRIVATE_KEY)
-				.keyID("keyId")
+		RSAKey rsaJwk = TestJwks.jwk(TestKeys.DEFAULT_PUBLIC_KEY, TestKeys.DEFAULT_PRIVATE_KEY)
 				.keyUse(KeyUse.ENCRYPTION)
 				.build();
 		// @formatter:on
@@ -145,13 +140,7 @@ public class NimbusJwsEncoderTests {
 
 	@Test
 	public void encodeWhenSuccessThenDecodes() throws Exception {
-		// @formatter:off
-		RSAKey rsaJwk = new RSAKey.Builder(TestKeys.DEFAULT_PUBLIC_KEY)
-				.privateKey(TestKeys.DEFAULT_PRIVATE_KEY)
-				.keyID("keyId")
-				.build();
-		// @formatter:on
-
+		RSAKey rsaJwk = TestJwks.DEFAULT_RSA_JWK;
 		given(this.jwkSelector.apply(any())).willReturn(rsaJwk);
 
 		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
@@ -170,13 +159,7 @@ public class NimbusJwsEncoderTests {
 
 	@Test
 	public void encodeWhenCustomizerSetThenCalled() {
-		// @formatter:off
-		RSAKey rsaJwk = new RSAKey.Builder(TestKeys.DEFAULT_PUBLIC_KEY)
-				.privateKey(TestKeys.DEFAULT_PRIVATE_KEY)
-				.keyID("keyId")
-				.build();
-		// @formatter:on
-
+		RSAKey rsaJwk = TestJwks.DEFAULT_RSA_JWK;
 		given(this.jwkSelector.apply(any())).willReturn(rsaJwk);
 
 		BiConsumer<JoseHeader.Builder, JwtClaimsSet.Builder> jwtCustomizer = mock(BiConsumer.class);
@@ -207,13 +190,7 @@ public class NimbusJwsEncoderTests {
 
 	@Test
 	public void defaultJwkSelectorApplyWhenMultipleSelectedThenThrowJwtEncodingException() {
-		// @formatter:off
-		RSAKey rsaJwk = new RSAKey.Builder(TestKeys.DEFAULT_PUBLIC_KEY)
-				.privateKey(TestKeys.DEFAULT_PRIVATE_KEY)
-				.keyID("keyId")
-				.build();
-		// @formatter:on
-
+		RSAKey rsaJwk = TestJwks.DEFAULT_RSA_JWK;
 		Supplier<JWKSet> jwkSetProvider = mock(Supplier.class);
 		given(jwkSetProvider.get()).willReturn(new JWKSet(Arrays.asList(rsaJwk, rsaJwk)));
 		NimbusJwsEncoder.DefaultJwkSelector jwkSelector = new NimbusJwsEncoder.DefaultJwkSelector(jwkSetProvider);
@@ -226,7 +203,7 @@ public class NimbusJwsEncoderTests {
 
 	@Test
 	public void encodeWhenKeysRotatedThenNewKeyUsed() throws Exception {
-		TestJwkSetProvider jwkSetProvider = new TestJwkSetProvider(new TestKeySource());
+		TestJwkSetProvider jwkSetProvider = new TestJwkSetProvider();
 		Function<JoseHeader, JWK> jwkSelector = new NimbusJwsEncoder.DefaultJwkSelector(jwkSetProvider);
 		Function<JoseHeader, JWK> jwkSelectorDelegate = spy(new Function<JoseHeader, JWK>() {
 			@Override
@@ -279,14 +256,11 @@ public class NimbusJwsEncoderTests {
 
 	private static final class TestJwkSetProvider implements Supplier<JWKSet> {
 
-		private final Converter<KeySource, JWKSet> jwkSetConverter = new NimbusKeySourceJWKSetConverter();
-
-		private final KeySource keySource;
+		private static int keyId = 1000;
 
 		private JWKSet jwkSet;
 
-		private TestJwkSetProvider(KeySource keySource) {
-			this.keySource = keySource;
+		private TestJwkSetProvider() {
 			init();
 		}
 
@@ -296,44 +270,22 @@ public class NimbusJwsEncoderTests {
 		}
 
 		private void init() {
-			this.jwkSet = this.jwkSetConverter.convert(this.keySource);
+			// @formatter:off
+			RSAKey rsaJwk = TestJwks.jwk(TestKeys.DEFAULT_PUBLIC_KEY, TestKeys.DEFAULT_PRIVATE_KEY)
+					.keyID("rsa-jwk-" + keyId++)
+					.build();
+			ECKey ecJwk = TestJwks.jwk((ECPublicKey) TestKeys.DEFAULT_EC_KEY_PAIR.getPublic(), (ECPrivateKey) TestKeys.DEFAULT_EC_KEY_PAIR.getPrivate())
+					.keyID("ec-jwk-" + keyId++)
+					.build();
+			OctetSequenceKey secretJwk = TestJwks.jwk(TestKeys.DEFAULT_SECRET_KEY)
+					.keyID("secret-jwk-" + keyId++)
+					.build();
+			// @formatter:on
+			this.jwkSet = new JWKSet(Arrays.asList(rsaJwk, ecJwk, secretJwk));
 		}
 
 		private void rotate() {
-			// ** Assumption **
-			// this.keySource (TestKeySource) is a basic implementation
-			// that holds the keys statically. However, let's make the assumption
-			// that the keys are dynamically updated based on the implementation
-			// requirements.
-			// Therefore, getKeyPairs() and getSecretKeys() will always return the
-			// "active" keys.
 			init();
-		}
-
-	}
-
-	private static final class TestKeySource implements KeySource {
-
-		private final Set<KeyPair> keyPairs;
-
-		private final Set<SecretKey> secretKeys;
-
-		private TestKeySource() {
-			this.keyPairs = new LinkedHashSet<>();
-			this.keyPairs.add(TestKeys.DEFAULT_RSA_KEY_PAIR);
-			this.keyPairs.add(TestKeys.DEFAULT_EC_KEY_PAIR);
-			this.secretKeys = new LinkedHashSet<>();
-			this.secretKeys.add(TestKeys.DEFAULT_SECRET_KEY);
-		}
-
-		@Override
-		public Set<KeyPair> getKeyPairs() {
-			return this.keyPairs;
-		}
-
-		@Override
-		public Set<SecretKey> getSecretKeys() {
-			return this.secretKeys;
 		}
 
 	}
