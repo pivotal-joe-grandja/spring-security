@@ -19,16 +19,20 @@ package org.springframework.security.oauth2.jwt;
 import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.function.BiConsumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
 
+import com.nimbusds.jose.KeySourceException;
 import com.nimbusds.jose.jwk.ECKey;
 import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.JWKSelector;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.KeyUse;
 import com.nimbusds.jose.jwk.OctetSequenceKey;
 import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.jwk.source.JWKSource;
+import com.nimbusds.jose.proc.SecurityContext;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -54,20 +58,20 @@ import static org.mockito.Mockito.verify;
  */
 public class NimbusJwsEncoderTests {
 
-	private Function<JoseHeader, JWK> jwkSelector;
+	private JWKSource<SecurityContext> jwkSource;
 
 	private NimbusJwsEncoder jwsEncoder;
 
 	@Before
 	public void setUp() {
-		this.jwkSelector = mock(Function.class);
-		this.jwsEncoder = new NimbusJwsEncoder(this.jwkSelector);
+		this.jwkSource = mock(JWKSource.class);
+		this.jwsEncoder = new NimbusJwsEncoder(this.jwkSource);
 	}
 
 	@Test
-	public void constructorWhenJwkSelectorNullThenThrowIllegalArgumentException() {
+	public void constructorWhenJwkSourceNullThenThrowIllegalArgumentException() {
 		assertThatIllegalArgumentException().isThrownBy(() -> new NimbusJwsEncoder(null))
-				.withMessage("jwkSelector cannot be null");
+				.withMessage("jwkSource cannot be null");
 	}
 
 	@Test
@@ -93,7 +97,48 @@ public class NimbusJwsEncoderTests {
 	}
 
 	@Test
-	public void encodeWhenJwkNotSelectedThenThrowJwtEncodingException() {
+	public void encodeWhenCustomizerSetThenCalled() throws Exception {
+		RSAKey rsaJwk = TestJwks.DEFAULT_RSA_JWK;
+		given(this.jwkSource.get(any(), any())).willReturn(Collections.singletonList(rsaJwk));
+
+		BiConsumer<JoseHeader.Builder, JwtClaimsSet.Builder> jwtCustomizer = mock(BiConsumer.class);
+		this.jwsEncoder.setJwtCustomizer(jwtCustomizer);
+
+		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
+		JwtClaimsSet jwtClaimsSet = TestJwtClaimsSets.jwtClaimsSet().build();
+
+		this.jwsEncoder.encode(joseHeader, jwtClaimsSet);
+
+		verify(jwtCustomizer).accept(any(JoseHeader.Builder.class), any(JwtClaimsSet.Builder.class));
+	}
+
+	@Test
+	public void encodeWhenJwkSelectFailedThenThrowJwtEncodingException() throws Exception {
+		given(this.jwkSource.get(any(), any())).willThrow(new KeySourceException("key source error"));
+
+		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
+		JwtClaimsSet jwtClaimsSet = TestJwtClaimsSets.jwtClaimsSet().build();
+
+		assertThatExceptionOfType(JwtEncodingException.class)
+				.isThrownBy(() -> this.jwsEncoder.encode(joseHeader, jwtClaimsSet))
+				.withMessageContaining("Failed to select a JWK signing key -> key source error");
+	}
+
+	@Test
+	public void encodeWhenJwkMultipleSelectedThenThrowJwtEncodingException() throws Exception {
+		RSAKey rsaJwk = TestJwks.DEFAULT_RSA_JWK;
+		given(this.jwkSource.get(any(), any())).willReturn(Arrays.asList(rsaJwk, rsaJwk));
+
+		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
+		JwtClaimsSet jwtClaimsSet = TestJwtClaimsSets.jwtClaimsSet().build();
+
+		assertThatExceptionOfType(JwtEncodingException.class)
+				.isThrownBy(() -> this.jwsEncoder.encode(joseHeader, jwtClaimsSet))
+				.withMessageContaining("Found multiple JWK signing keys for algorithm 'RS256'");
+	}
+
+	@Test
+	public void encodeWhenJwkSelectEmptyThenThrowJwtEncodingException() {
 		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
 		JwtClaimsSet jwtClaimsSet = TestJwtClaimsSets.jwtClaimsSet().build();
 
@@ -103,14 +148,14 @@ public class NimbusJwsEncoderTests {
 	}
 
 	@Test
-	public void encodeWhenJwkKidNullThenThrowJwtEncodingException() {
+	public void encodeWhenJwkKidNullThenThrowJwtEncodingException() throws Exception {
 		// @formatter:off
 		RSAKey rsaJwk = TestJwks.jwk(TestKeys.DEFAULT_PUBLIC_KEY, TestKeys.DEFAULT_PRIVATE_KEY)
 				.keyID(null)
 				.build();
 		// @formatter:on
 
-		given(this.jwkSelector.apply(any())).willReturn(rsaJwk);
+		given(this.jwkSource.get(any(), any())).willReturn(Collections.singletonList(rsaJwk));
 
 		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
 		JwtClaimsSet jwtClaimsSet = TestJwtClaimsSets.jwtClaimsSet().build();
@@ -121,14 +166,14 @@ public class NimbusJwsEncoderTests {
 	}
 
 	@Test
-	public void encodeWhenJwkUseEncryptionThenThrowJwtEncodingException() {
+	public void encodeWhenJwkUseEncryptionThenThrowJwtEncodingException() throws Exception {
 		// @formatter:off
 		RSAKey rsaJwk = TestJwks.jwk(TestKeys.DEFAULT_PUBLIC_KEY, TestKeys.DEFAULT_PRIVATE_KEY)
 				.keyUse(KeyUse.ENCRYPTION)
 				.build();
 		// @formatter:on
 
-		given(this.jwkSelector.apply(any())).willReturn(rsaJwk);
+		given(this.jwkSource.get(any(), any())).willReturn(Collections.singletonList(rsaJwk));
 
 		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
 		JwtClaimsSet jwtClaimsSet = TestJwtClaimsSets.jwtClaimsSet().build();
@@ -141,7 +186,7 @@ public class NimbusJwsEncoderTests {
 	@Test
 	public void encodeWhenSuccessThenDecodes() throws Exception {
 		RSAKey rsaJwk = TestJwks.DEFAULT_RSA_JWK;
-		given(this.jwkSelector.apply(any())).willReturn(rsaJwk);
+		given(this.jwkSource.get(any(), any())).willReturn(Collections.singletonList(rsaJwk));
 
 		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
 		JwtClaimsSet jwtClaimsSet = TestJwtClaimsSets.jwtClaimsSet().build();
@@ -158,127 +203,81 @@ public class NimbusJwsEncoderTests {
 	}
 
 	@Test
-	public void encodeWhenCustomizerSetThenCalled() {
-		RSAKey rsaJwk = TestJwks.DEFAULT_RSA_JWK;
-		given(this.jwkSelector.apply(any())).willReturn(rsaJwk);
-
-		BiConsumer<JoseHeader.Builder, JwtClaimsSet.Builder> jwtCustomizer = mock(BiConsumer.class);
-		this.jwsEncoder.setJwtCustomizer(jwtCustomizer);
-
-		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
-		JwtClaimsSet jwtClaimsSet = TestJwtClaimsSets.jwtClaimsSet().build();
-
-		this.jwsEncoder.encode(joseHeader, jwtClaimsSet);
-
-		verify(jwtCustomizer).accept(any(JoseHeader.Builder.class), any(JwtClaimsSet.Builder.class));
-	}
-
-	@Test
-	public void defaultJwkSelectorConstructorWhenJwkSetProviderNullThenThrowIllegalArgumentException() {
-		assertThatIllegalArgumentException().isThrownBy(() -> new NimbusJwsEncoder.DefaultJwkSelector(null))
-				.withMessage("jwkSetProvider cannot be null");
-	}
-
-	@Test
-	public void defaultJwkSelectorApplyWhenHeadersNullThenThrowIllegalArgumentException() {
-		Supplier<JWKSet> jwkSetProvider = mock(Supplier.class);
-		NimbusJwsEncoder.DefaultJwkSelector jwkSelector = new NimbusJwsEncoder.DefaultJwkSelector(jwkSetProvider);
-
-		assertThatIllegalArgumentException().isThrownBy(() -> jwkSelector.apply(null))
-				.withMessageContaining("headers cannot be null");
-	}
-
-	@Test
-	public void defaultJwkSelectorApplyWhenMultipleSelectedThenThrowJwtEncodingException() {
-		RSAKey rsaJwk = TestJwks.DEFAULT_RSA_JWK;
-		Supplier<JWKSet> jwkSetProvider = mock(Supplier.class);
-		given(jwkSetProvider.get()).willReturn(new JWKSet(Arrays.asList(rsaJwk, rsaJwk)));
-		NimbusJwsEncoder.DefaultJwkSelector jwkSelector = new NimbusJwsEncoder.DefaultJwkSelector(jwkSetProvider);
-
-		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
-
-		assertThatExceptionOfType(JwtEncodingException.class).isThrownBy(() -> jwkSelector.apply(joseHeader))
-				.withMessageContaining("Found multiple JWK signing keys for algorithm 'RS256'");
-	}
-
-	@Test
 	public void encodeWhenKeysRotatedThenNewKeyUsed() throws Exception {
-		TestJwkSetProvider jwkSetProvider = new TestJwkSetProvider();
-		Function<JoseHeader, JWK> jwkSelector = new NimbusJwsEncoder.DefaultJwkSelector(jwkSetProvider);
-		Function<JoseHeader, JWK> jwkSelectorDelegate = spy(new Function<JoseHeader, JWK>() {
+		TestJWKSource jwkSource = new TestJWKSource();
+		JWKSource<SecurityContext> jwkSourceDelegate = spy(new JWKSource<SecurityContext>() {
 			@Override
-			public JWK apply(JoseHeader headers) {
-				return jwkSelector.apply(headers);
+			public List<JWK> get(JWKSelector jwkSelector, SecurityContext context) {
+				return jwkSource.get(jwkSelector, context);
 			}
 		});
+		NimbusJwsEncoder jwsEncoder = new NimbusJwsEncoder(jwkSourceDelegate);
 
-		JwkResultCaptor jwkResultCaptor = new JwkResultCaptor();
-		willAnswer(jwkResultCaptor).given(jwkSelectorDelegate).apply(any());
-
-		NimbusJwsEncoder jwsEncoder = new NimbusJwsEncoder(jwkSelectorDelegate);
+		JwkListResultCaptor jwkListResultCaptor = new JwkListResultCaptor();
+		willAnswer(jwkListResultCaptor).given(jwkSourceDelegate).get(any(), any());
 
 		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
 		JwtClaimsSet jwtClaimsSet = TestJwtClaimsSets.jwtClaimsSet().build();
 
 		Jwt encodedJws = jwsEncoder.encode(joseHeader, jwtClaimsSet);
 
-		JWK jwk1 = jwkResultCaptor.getResult();
+		JWK jwk1 = jwkListResultCaptor.getResult().get(0);
 		NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withPublicKey(((RSAKey) jwk1).toRSAPublicKey()).build();
 		jwtDecoder.decode(encodedJws.getTokenValue());
 
-		jwkSetProvider.rotate(); // Trigger key rotation
+		jwkSource.rotate(); // Trigger key rotation
 
 		encodedJws = jwsEncoder.encode(joseHeader, jwtClaimsSet);
 
-		JWK jwk2 = jwkResultCaptor.getResult();
+		JWK jwk2 = jwkListResultCaptor.getResult().get(0);
 		jwtDecoder = NimbusJwtDecoder.withPublicKey(((RSAKey) jwk2).toRSAPublicKey()).build();
 		jwtDecoder.decode(encodedJws.getTokenValue());
 
 		assertThat(jwk1.getKeyID()).isNotEqualTo(jwk2.getKeyID());
 	}
 
-	private static final class JwkResultCaptor implements Answer<JWK> {
+	private static final class JwkListResultCaptor implements Answer<List<JWK>> {
 
-		private JWK result;
+		private List<JWK> result;
 
-		private JWK getResult() {
+		private List<JWK> getResult() {
 			return this.result;
 		}
 
 		@SuppressWarnings("unchecked")
 		@Override
-		public JWK answer(InvocationOnMock invocationOnMock) throws Throwable {
-			this.result = (JWK) invocationOnMock.callRealMethod();
+		public List<JWK> answer(InvocationOnMock invocationOnMock) throws Throwable {
+			this.result = (List<JWK>) invocationOnMock.callRealMethod();
 			return this.result;
 		}
 
 	}
 
-	private static final class TestJwkSetProvider implements Supplier<JWKSet> {
+	private static final class TestJWKSource implements JWKSource<SecurityContext> {
 
-		private static int keyId = 1000;
+		private int keyId = 1000;
 
 		private JWKSet jwkSet;
 
-		private TestJwkSetProvider() {
+		private TestJWKSource() {
 			init();
 		}
 
 		@Override
-		public JWKSet get() {
-			return this.jwkSet;
+		public List<JWK> get(JWKSelector jwkSelector, SecurityContext context) {
+			return jwkSelector.select(this.jwkSet);
 		}
 
 		private void init() {
 			// @formatter:off
 			RSAKey rsaJwk = TestJwks.jwk(TestKeys.DEFAULT_PUBLIC_KEY, TestKeys.DEFAULT_PRIVATE_KEY)
-					.keyID("rsa-jwk-" + keyId++)
+					.keyID("rsa-jwk-" + this.keyId++)
 					.build();
 			ECKey ecJwk = TestJwks.jwk((ECPublicKey) TestKeys.DEFAULT_EC_KEY_PAIR.getPublic(), (ECPrivateKey) TestKeys.DEFAULT_EC_KEY_PAIR.getPrivate())
-					.keyID("ec-jwk-" + keyId++)
+					.keyID("ec-jwk-" + this.keyId++)
 					.build();
 			OctetSequenceKey secretJwk = TestJwks.jwk(TestKeys.DEFAULT_SECRET_KEY)
-					.keyID("secret-jwk-" + keyId++)
+					.keyID("secret-jwk-" + this.keyId++)
 					.build();
 			// @formatter:on
 			this.jwkSet = new JWKSet(Arrays.asList(rsaJwk, ecJwk, secretJwk));
