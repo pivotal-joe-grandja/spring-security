@@ -18,7 +18,7 @@ package org.springframework.security.oauth2.jwt;
 
 import java.net.URL;
 import java.util.Collections;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -49,7 +49,7 @@ public final class JoseHeader {
 	private final Map<String, Object> headers;
 
 	private JoseHeader(Map<String, Object> headers) {
-		this.headers = Collections.unmodifiableMap(new LinkedHashMap<>(headers));
+		this.headers = Collections.unmodifiableMap(new HashMap<>(headers));
 	}
 
 	/**
@@ -199,7 +199,7 @@ public final class JoseHeader {
 	 */
 	public static final class Builder {
 
-		private final Map<String, Object> headers = new LinkedHashMap<>();
+		private final Map<String, Object> headers = new HashMap<>();
 
 		private Builder(JwaAlgorithm jwaAlgorithm) {
 			Assert.notNull(jwaAlgorithm, "jwaAlgorithm cannot be null");

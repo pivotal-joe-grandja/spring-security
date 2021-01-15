@@ -18,7 +18,7 @@ package org.springframework.security.oauth2.jwt;
 
 import java.time.Instant;
 import java.util.Collections;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -42,7 +42,7 @@ public final class JwtClaimsSet implements JwtClaimAccessor {
 	private final Map<String, Object> claims;
 
 	private JwtClaimsSet(Map<String, Object> claims) {
-		this.claims = Collections.unmodifiableMap(new LinkedHashMap<>(claims));
+		this.claims = Collections.unmodifiableMap(new HashMap<>(claims));
 	}
 
 	@Override
@@ -72,7 +72,7 @@ public final class JwtClaimsSet implements JwtClaimAccessor {
 	 */
 	public static final class Builder {
 
-		private final Map<String, Object> claims = new LinkedHashMap<>();
+		private final Map<String, Object> claims = new HashMap<>();
 
 		private Builder() {
 		}
