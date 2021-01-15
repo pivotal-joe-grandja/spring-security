@@ -16,7 +16,6 @@
 
 package org.springframework.security.oauth2.jwt;
 
-import java.net.URI;
 import java.net.URL;
 import java.time.Instant;
 import java.util.Date;
@@ -208,10 +207,10 @@ public final class NimbusJwsEncoder implements JwtEncoder {
 				builder.contentType(contentType);
 			}
 
-			String jwkSetUri = headers.getJwkSetUri();
-			if (StringUtils.hasText(jwkSetUri)) {
+			URL jwkSetUri = headers.getJwkSetUri();
+			if (jwkSetUri != null) {
 				try {
-					builder.jwkURL(new URI(jwkSetUri));
+					builder.jwkURL(jwkSetUri.toURI());
 				}
 				catch (Exception ex) {
 					throw new JwtEncodingException(String.format(ENCODING_ERROR_MESSAGE_TEMPLATE,
@@ -255,10 +254,10 @@ public final class NimbusJwsEncoder implements JwtEncoder {
 				builder.x509CertSHA256Thumbprint(new Base64URL(x509SHA256Thumbprint));
 			}
 
-			String x509Uri = headers.getX509Uri();
-			if (StringUtils.hasText(x509Uri)) {
+			URL x509Uri = headers.getX509Uri();
+			if (x509Uri != null) {
 				try {
-					builder.x509CertURL(new URI(x509Uri));
+					builder.x509CertURL(x509Uri.toURI());
 				}
 				catch (Exception ex) {
 					throw new JwtEncodingException(String.format(ENCODING_ERROR_MESSAGE_TEMPLATE,

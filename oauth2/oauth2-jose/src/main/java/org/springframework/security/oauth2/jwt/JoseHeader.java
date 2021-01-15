@@ -16,6 +16,7 @@
 
 package org.springframework.security.oauth2.jwt;
 
+import java.net.URL;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -23,6 +24,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import org.springframework.security.oauth2.core.converter.ClaimConversionService;
 import org.springframework.security.oauth2.jose.JwaAlgorithm;
 import org.springframework.util.Assert;
 
@@ -66,7 +68,7 @@ public final class JoseHeader {
 	 * the JWE.
 	 * @return the JWK Set URL
 	 */
-	public String getJwkSetUri() {
+	public URL getJwkSetUri() {
 		return getHeader(JoseHeaderNames.JKU);
 	}
 
@@ -94,7 +96,7 @@ public final class JoseHeader {
 	 * the JWS or encrypt the JWE.
 	 * @return the X.509 URL
 	 */
-	public String getX509Uri() {
+	public URL getX509Uri() {
 		return getHeader(JoseHeaderNames.X5U);
 	}
 
@@ -343,7 +345,19 @@ public final class JoseHeader {
 		 */
 		public JoseHeader build() {
 			Assert.notEmpty(this.headers, "headers cannot be empty");
+			convertAsURL(JoseHeaderNames.JKU);
+			convertAsURL(JoseHeaderNames.X5U);
 			return new JoseHeader(this.headers);
+		}
+
+		private void convertAsURL(String header) {
+			Object value = this.headers.get(header);
+			if (value != null) {
+				URL convertedValue = ClaimConversionService.getSharedInstance().convert(value, URL.class);
+				Assert.isTrue(convertedValue != null,
+						() -> "Unable to convert header '" + header + "' of type '" + value.getClass() + "' to URL.");
+				this.headers.put(header, convertedValue);
+			}
 		}
 
 	}

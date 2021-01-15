@@ -43,10 +43,10 @@ public class JoseHeaderTests {
 
 		// @formatter:off
 		JoseHeader joseHeader = JoseHeader.withAlgorithm(expectedJoseHeader.getAlgorithm())
-				.jwkSetUri(expectedJoseHeader.getJwkSetUri())
+				.jwkSetUri(expectedJoseHeader.getJwkSetUri().toExternalForm())
 				.jwk(expectedJoseHeader.getJwk())
 				.keyId(expectedJoseHeader.getKeyId())
-				.x509Uri(expectedJoseHeader.getX509Uri())
+				.x509Uri(expectedJoseHeader.getX509Uri().toExternalForm())
 				.x509CertificateChain(expectedJoseHeader.getX509CertificateChain())
 				.x509SHA1Thumbprint(expectedJoseHeader.getX509SHA1Thumbprint())
 				.x509SHA256Thumbprint(expectedJoseHeader.getX509SHA256Thumbprint())
