@@ -177,6 +177,14 @@ public final class JoseHeader {
 	}
 
 	/**
+	 * Returns a new {@link Builder}.
+	 * @return the {@link Builder}
+	 */
+	public static Builder builder() {
+		return new Builder();
+	}
+
+	/**
 	 * Returns a new {@link Builder}, initialized with the provided {@link JwaAlgorithm}.
 	 * @param jwaAlgorithm the {@link JwaAlgorithm}
 	 * @return the {@link Builder}
@@ -201,6 +209,9 @@ public final class JoseHeader {
 
 		private final Map<String, Object> headers = new HashMap<>();
 
+		private Builder() {
+		}
+
 		private Builder(JwaAlgorithm jwaAlgorithm) {
 			Assert.notNull(jwaAlgorithm, "jwaAlgorithm cannot be null");
 			header(JoseHeaderNames.ALG, jwaAlgorithm);
@@ -209,6 +220,16 @@ public final class JoseHeader {
 		private Builder(JoseHeader headers) {
 			Assert.notNull(headers, "headers cannot be null");
 			this.headers.putAll(headers.getHeaders());
+		}
+
+		/**
+		 * Sets the {@link JwaAlgorithm JWA algorithm} used to digitally sign the JWS or
+		 * encrypt the JWE.
+		 * @param jwaAlgorithm the {@link JwaAlgorithm}
+		 * @return the {@link Builder}
+		 */
+		public Builder algorithm(JwaAlgorithm jwaAlgorithm) {
+			return header(JoseHeaderNames.ALG, jwaAlgorithm);
 		}
 
 		/**
