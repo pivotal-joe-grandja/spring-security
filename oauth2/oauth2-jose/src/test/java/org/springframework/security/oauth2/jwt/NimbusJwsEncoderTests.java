@@ -18,6 +18,7 @@ package org.springframework.security.oauth2.jwt;
 
 import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -58,13 +59,16 @@ import static org.mockito.Mockito.verify;
  */
 public class NimbusJwsEncoderTests {
 
+	private List<JWK> jwkList;
+
 	private JWKSource<SecurityContext> jwkSource;
 
 	private NimbusJwsEncoder jwsEncoder;
 
 	@Before
 	public void setUp() {
-		this.jwkSource = mock(JWKSource.class);
+		this.jwkList = new ArrayList<>();
+		this.jwkSource = (jwkSelector, securityContext) -> jwkSelector.select(new JWKSet(this.jwkList));
 		this.jwsEncoder = new NimbusJwsEncoder(this.jwkSource);
 	}
 
@@ -99,7 +103,7 @@ public class NimbusJwsEncoderTests {
 	@Test
 	public void encodeWhenCustomizerSetThenCalled() throws Exception {
 		RSAKey rsaJwk = TestJwks.DEFAULT_RSA_JWK;
-		given(this.jwkSource.get(any(), any())).willReturn(Collections.singletonList(rsaJwk));
+		this.jwkList.add(rsaJwk);
 
 		BiConsumer<JoseHeader.Builder, JwtClaimsSet.Builder> jwtCustomizer = mock(BiConsumer.class);
 		this.jwsEncoder.setJwtCustomizer(jwtCustomizer);
@@ -114,6 +118,8 @@ public class NimbusJwsEncoderTests {
 
 	@Test
 	public void encodeWhenJwkSelectFailedThenThrowJwtEncodingException() throws Exception {
+		this.jwkSource = mock(JWKSource.class);
+		this.jwsEncoder = new NimbusJwsEncoder(this.jwkSource);
 		given(this.jwkSource.get(any(), any())).willThrow(new KeySourceException("key source error"));
 
 		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
@@ -127,7 +133,8 @@ public class NimbusJwsEncoderTests {
 	@Test
 	public void encodeWhenJwkMultipleSelectedThenThrowJwtEncodingException() throws Exception {
 		RSAKey rsaJwk = TestJwks.DEFAULT_RSA_JWK;
-		given(this.jwkSource.get(any(), any())).willReturn(Arrays.asList(rsaJwk, rsaJwk));
+		this.jwkList.add(rsaJwk);
+		this.jwkList.add(rsaJwk);
 
 		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
 		JwtClaimsSet jwtClaimsSet = TestJwtClaimsSets.jwtClaimsSet().build();
@@ -155,7 +162,7 @@ public class NimbusJwsEncoderTests {
 				.build();
 		// @formatter:on
 
-		given(this.jwkSource.get(any(), any())).willReturn(Collections.singletonList(rsaJwk));
+		this.jwkList.add(rsaJwk);
 
 		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
 		JwtClaimsSet jwtClaimsSet = TestJwtClaimsSets.jwtClaimsSet().build();
@@ -173,6 +180,8 @@ public class NimbusJwsEncoderTests {
 				.build();
 		// @formatter:on
 
+		this.jwkSource = mock(JWKSource.class);
+		this.jwsEncoder = new NimbusJwsEncoder(this.jwkSource);
 		given(this.jwkSource.get(any(), any())).willReturn(Collections.singletonList(rsaJwk));
 
 		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
@@ -186,7 +195,7 @@ public class NimbusJwsEncoderTests {
 	@Test
 	public void encodeWhenSuccessThenDecodes() throws Exception {
 		RSAKey rsaJwk = TestJwks.DEFAULT_RSA_JWK;
-		given(this.jwkSource.get(any(), any())).willReturn(Collections.singletonList(rsaJwk));
+		this.jwkList.add(rsaJwk);
 
 		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
 		JwtClaimsSet jwtClaimsSet = TestJwtClaimsSets.jwtClaimsSet().build();
