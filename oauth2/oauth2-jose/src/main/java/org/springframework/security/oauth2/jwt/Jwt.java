@@ -16,17 +16,14 @@
 
 package org.springframework.security.oauth2.jwt;
 
-import java.net.URL;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import org.springframework.security.oauth2.core.AbstractOAuth2Token;
-import org.springframework.security.oauth2.jose.jws.JwsAlgorithm;
 import org.springframework.util.Assert;
 
 /**
@@ -100,181 +97,13 @@ public class Jwt extends AbstractOAuth2Token implements JwtClaimAccessor {
 	}
 
 	/**
-	 * A JWT Specification, useful for JWT builders
-	 *
-	 * @param <B>
-	 */
-	public interface JwtSpec<B extends JwtSpec<B>> {
-
-		/**
-		 * Use this header in the resulting {@link Jwt}
-		 * @param name The header name
-		 * @param value The header value
-		 * @return the {@link Builder} for further configurations
-		 */
-		default B header(String name, Object value) {
-			return headers((headers) -> headers.put(name, value));
-		}
-
-		B headers(Consumer<Map<String, Object>> headersConsumer);
-
-		default B type(String type) {
-			return header(JoseHeaderNames.TYP, type);
-		}
-
-		default B contentType(String contentType) {
-			return header(JoseHeaderNames.CTY, contentType);
-		}
-
-		/**
-		 * Use this claim in the resulting {@link Jwt}
-		 * @param name The claim name
-		 * @param value The claim value
-		 * @return the {@link Builder} for further configurations
-		 */
-		default B claim(String name, Object value) {
-			return claims((claims) -> claims.put(name, value));
-		}
-
-		B claims(Consumer<Map<String, Object>> claimsConsumer);
-
-		/**
-		 * Use this audience in the resulting {@link Jwt}
-		 * @param audience The audience(s) to use
-		 * @return the {@link Builder} for further configurations
-		 */
-		default B audience(Collection<String> audience) {
-			return claim(JwtClaimNames.AUD, audience);
-		}
-
-		/**
-		 * Use this expiration in the resulting {@link Jwt}
-		 * @param expiresAt The expiration to use
-		 * @return the {@link Builder} for further configurations
-		 */
-		default B expiresAt(Instant expiresAt) {
-			return claim(JwtClaimNames.EXP, expiresAt);
-		}
-
-		default B expiresAt(Function<Instant, Instant> issuedAtConverter) {
-			return claims((claims) -> {
-				Instant issuedAt = (Instant) claims.get(JwtClaimNames.IAT);
-				Instant expiresAt = issuedAtConverter.apply(issuedAt);
-				expiresAt(expiresAt);
-			});
-		}
-
-		/**
-		 * Use this identifier in the resulting {@link Jwt}
-		 * @param jti The identifier to use
-		 * @return the {@link Builder} for further configurations
-		 */
-		default B jti(String jti) {
-			return claim(JwtClaimNames.JTI, jti);
-		}
-
-		/**
-		 * Use this issued-at timestamp in the resulting {@link Jwt}
-		 * @param issuedAt The issued-at timestamp to use
-		 * @return the {@link Builder} for further configurations
-		 */
-		default B issuedAt(Instant issuedAt) {
-			return claim(JwtClaimNames.IAT, issuedAt);
-		}
-
-		/**
-		 * Use this issuer in the resulting {@link Jwt}
-		 * @param issuer The issuer to use
-		 * @return the {@link Builder} for further configurations
-		 */
-		default B issuer(String issuer) {
-			return claim(JwtClaimNames.ISS, issuer);
-		}
-
-		/**
-		 * Use this not-before timestamp in the resulting {@link Jwt}
-		 * @param notBefore The not-before timestamp to use
-		 * @return the {@link Builder} for further configurations
-		 */
-		default B notBefore(Instant notBefore) {
-			return claim(JwtClaimNames.NBF, notBefore);
-		}
-
-		/**
-		 * Use this subject in the resulting {@link Jwt}
-		 * @param subject The subject to use
-		 * @return the {@link Builder} for further configurations
-		 */
-		default B subject(String subject) {
-			return claim(JwtClaimNames.SUB, subject);
-		}
-
-	}
-
-	/**
-	 * A JWS Specification, useful for JWS builders
-	 *
-	 * @param <B>
-	 */
-	public interface JwsSpec<B extends JwsSpec<B>> extends JwtSpec<B> {
-
-		default B algorithm(JwsAlgorithm jwsAlgorithm) {
-			return header(JoseHeaderNames.ALG, jwsAlgorithm.getName());
-		}
-
-		default B jwkSetUrl(URL url) {
-			return header(JoseHeaderNames.JKU, url);
-		}
-
-		default B kid(String kid) {
-			return header(JoseHeaderNames.KID, kid);
-		}
-
-		default B x509Url(URL url) {
-			return header(JoseHeaderNames.X5U, url);
-		}
-
-		default B x509Certificate(Collection<String> certificateChain) {
-			return header(JoseHeaderNames.X5C, certificateChain);
-		}
-
-		Jwt sign();
-
-	}
-
-	/**
-	 * Support that simplifies creating a JWT or JWS builder
-	 *
-	 * @param <B>
-	 */
-	public static abstract class JwtSpecSupport<B extends JwtSpecSupport<B>> implements JwtSpec<B> {
-
-		protected final Map<String, Object> claims = new LinkedHashMap<>();
-
-		protected final Map<String, Object> headers = new LinkedHashMap<>();
-
-		@Override
-		public B headers(Consumer<Map<String, Object>> claimsConsumer) {
-			claimsConsumer.accept(this.headers);
-			return (B) this;
-		}
-
-		@Override
-		public B claims(Consumer<Map<String, Object>> claimsConsumer) {
-			claimsConsumer.accept(this.claims);
-			return (B) this;
-		}
-
-	}
-
-	/**
 	 * Helps configure a {@link Jwt}
 	 *
 	 * @author Jérôme Wacongne &lt;ch4mp&#64;c4-soft.com&gt;
 	 * @author Josh Cummings
 	 * @since 5.2
 	 */
-	public static final class Builder implements JwtSpec<Builder> {
+	public static final class Builder {
 
 		private String tokenValue;
 
@@ -284,6 +113,89 @@ public class Jwt extends AbstractOAuth2Token implements JwtClaimAccessor {
 
 		private Builder(String tokenValue) {
 			this.tokenValue = tokenValue;
+		}
+
+		/**
+		 * Use this header in the resulting {@link Jwt}
+		 * @param name The header name
+		 * @param value The header value
+		 * @return the {@link Builder} for further configurations
+		 */
+		public Builder header(String name, Object value) {
+			return headers((headers) -> headers.put(name, value));
+		}
+
+		/**
+		 * Use this claim in the resulting {@link Jwt}
+		 * @param name The claim name
+		 * @param value The claim value
+		 * @return the {@link Builder} for further configurations
+		 */
+		public Builder claim(String name, Object value) {
+			return claims((claims) -> claims.put(name, value));
+		}
+
+		/**
+		 * Use this audience in the resulting {@link Jwt}
+		 * @param audience The audience(s) to use
+		 * @return the {@link Builder} for further configurations
+		 */
+		public Builder audience(Collection<String> audience) {
+			return claim(JwtClaimNames.AUD, audience);
+		}
+
+		/**
+		 * Use this expiration in the resulting {@link Jwt}
+		 * @param expiresAt The expiration to use
+		 * @return the {@link Builder} for further configurations
+		 */
+		public Builder expiresAt(Instant expiresAt) {
+			return claim(JwtClaimNames.EXP, expiresAt);
+		}
+
+		/**
+		 * Use this identifier in the resulting {@link Jwt}
+		 * @param jti The identifier to use
+		 * @return the {@link Builder} for further configurations
+		 */
+		public Builder jti(String jti) {
+			return claim(JwtClaimNames.JTI, jti);
+		}
+
+		/**
+		 * Use this issued-at timestamp in the resulting {@link Jwt}
+		 * @param issuedAt The issued-at timestamp to use
+		 * @return the {@link Builder} for further configurations
+		 */
+		public Builder issuedAt(Instant issuedAt) {
+			return claim(JwtClaimNames.IAT, issuedAt);
+		}
+
+		/**
+		 * Use this issuer in the resulting {@link Jwt}
+		 * @param issuer The issuer to use
+		 * @return the {@link Builder} for further configurations
+		 */
+		public Builder issuer(String issuer) {
+			return claim(JwtClaimNames.ISS, issuer);
+		}
+
+		/**
+		 * Use this not-before timestamp in the resulting {@link Jwt}
+		 * @param notBefore The not-before timestamp to use
+		 * @return the {@link Builder} for further configurations
+		 */
+		public Builder notBefore(Instant notBefore) {
+			return claim(JwtClaimNames.NBF, notBefore);
+		}
+
+		/**
+		 * Use this subject in the resulting {@link Jwt}
+		 * @param subject The subject to use
+		 * @return the {@link Builder} for further configurations
+		 */
+		public Builder subject(String subject) {
+			return claim(JwtClaimNames.SUB, subject);
 		}
 
 		/**
