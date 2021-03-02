@@ -30,24 +30,24 @@ import com.nimbusds.jose.jwk.source.JWKSource;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.oauth2.jwt.JwtEncoderAlternative;
-import org.springframework.security.oauth2.jwt.NimbusJwtEncoderAlternative;
+import org.springframework.security.oauth2.jwt.JwtBuilderFactory;
+import org.springframework.security.oauth2.jwt.NimbusJwtBuilderFactory;
 import org.springframework.security.oauth2.jwt.JwtSubjectApplier;
 import org.springframework.security.oauth2.jwt.JwtTimestampApplier;
 
 @Configuration
 public class TokenConfigTwo {
 	@Bean
-	NimbusJwtEncoderAlternative<TenantSecurityContext> jwsEncoder(RSAKey key) {
-		NimbusJwtEncoderAlternative<TenantSecurityContext> jwsEncoder = new NimbusJwtEncoderAlternative<>();
+	NimbusJwtBuilderFactory<TenantSecurityContext> jwsEncoder(RSAKey key) {
+		NimbusJwtBuilderFactory<TenantSecurityContext> jwsEncoder = new NimbusJwtBuilderFactory<>();
 		jwsEncoder.setJwkSource(new TenantJwkSource(key));
 		return jwsEncoder;
 	}
 
 	@Bean
-	Consumer<JwtEncoderAlternative.JwtPartial<?>> jwsCustomizer() {
+	Consumer<JwtBuilderFactory.JwtBuilder<?>> jwsCustomizer() {
 		return (spec) -> spec
-			.jwsHeader((headers) -> headers.critical(Collections.singleton("exp"))) // might want to override at invocation time
+			.joseHeader((headers) -> headers.critical(Collections.singleton("exp"))) // might want to override at invocation time
 			.claimsSet((claims) -> claims.issuer("http://self"))
 			.apply(new JwtSubjectApplier())
 			.apply(new JwtTimestampApplier());

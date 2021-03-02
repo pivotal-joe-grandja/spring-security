@@ -20,9 +20,9 @@ import java.util.function.Consumer;
 
 import org.springframework.security.core.context.SecurityContextHolder;
 
-public class JwtSubjectApplier implements Consumer<JwtEncoderAlternative.JwtPartial<?>> {
+public class JwtSubjectApplier implements Consumer<JwtBuilderFactory.JwtBuilder<?>> {
 	@Override
-	public void accept(JwtEncoderAlternative.JwtPartial<?> jwtPartial) {
-		jwtPartial.claimsSet((claims) -> claims.subject(SecurityContextHolder.getContext().getAuthentication().getName()));
+	public void accept(JwtBuilderFactory.JwtBuilder<?> jwtBuilder) {
+		jwtBuilder.claimsSet((claims) -> claims.subject(SecurityContextHolder.getContext().getAuthentication().getName()));
 	}
 }

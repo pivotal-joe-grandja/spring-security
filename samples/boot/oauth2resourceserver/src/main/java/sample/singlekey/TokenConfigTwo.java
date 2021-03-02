@@ -22,20 +22,20 @@ import com.nimbusds.jose.jwk.RSAKey;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.oauth2.jwt.JwtEncoderAlternative;
-import org.springframework.security.oauth2.jwt.NimbusJwtEncoderAlternative;
+import org.springframework.security.oauth2.jwt.JwtBuilderFactory;
+import org.springframework.security.oauth2.jwt.NimbusJwtBuilderFactory;
 import org.springframework.security.oauth2.jwt.JwtSubjectApplier;
 import org.springframework.security.oauth2.jwt.JwtTimestampApplier;
 
 @Configuration
 public class TokenConfigTwo {
 	@Bean
-	JwtEncoderAlternative jwsEncoder(RSAKey key) {
-		NimbusJwtEncoderAlternative<?> delegate = new NimbusJwtEncoderAlternative<>();
-		return () -> delegate.signer()
+	JwtBuilderFactory jwsBuilderFactory(RSAKey key) {
+		NimbusJwtBuilderFactory<?> delegate = new NimbusJwtBuilderFactory<>();
+		return () -> delegate.create()
 				.jwk(key) // simple to specify the key since I can expose Nimbus-specific methods when returning a builder
 				.claimsSet((claims) -> claims.issuer("http://self"))
-				.jwsHeader((headers) -> headers.critical(Collections.singleton("exp"))) // application-level opinion that might need overriding
+				.joseHeader((headers) -> headers.critical(Collections.singleton("exp"))) // application-level opinion that might need overriding
 				.apply(new JwtTimestampApplier())
 				.apply(new JwtSubjectApplier());
 	}

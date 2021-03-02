@@ -31,8 +31,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JoseHeader;
-import org.springframework.security.oauth2.jwt.JwtEncoderAlternative;
-import org.springframework.security.oauth2.jwt.NimbusJwtEncoderAlternative;
+import org.springframework.security.oauth2.jwt.JwtBuilderFactory;
+import org.springframework.security.oauth2.jwt.NimbusJwtBuilderFactory;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 
 @Configuration
@@ -58,9 +58,9 @@ public class TokenConfigTwo {
 	}
 
 	@Bean
-	JwtEncoderAlternative jwsEncoder(RSAKey key) {
+    JwtBuilderFactory jwsEncoder(RSAKey key) {
 		JWKSource<SecurityContext> jwks = new ImmutableJWKSet<>(new JWKSet(key));
-		NimbusJwtEncoderAlternative<SecurityContext> jwsEncoder = new NimbusJwtEncoderAlternative<>();
+		NimbusJwtBuilderFactory<SecurityContext> jwsEncoder = new NimbusJwtBuilderFactory<>();
 		jwsEncoder.setJwkSource(jwks);
 		return jwsEncoder;
 	}

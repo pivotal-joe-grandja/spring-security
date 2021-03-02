@@ -18,20 +18,20 @@ package sample.singlekey;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.jwt.JoseHeaderNames;
-import org.springframework.security.oauth2.jwt.JwtEncoderAlternative;
+import org.springframework.security.oauth2.jwt.JwtBuilderFactory;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class TokenControllerTwo {
 	@Autowired
-	JwtEncoderAlternative jwtEncoderAlternative;
+	JwtBuilderFactory jwtBuilderFactory;
 
 	@GetMapping("/token/two")
 	String tokenTwo() {
-		return this.jwtEncoderAlternative.signer()
+		return this.jwtBuilderFactory.create()
 				.claimsSet((claims) -> claims.id("id"))
-				.jwsHeaders((headers) -> headers.remove(JoseHeaderNames.CRIT))
-				.sign().getTokenValue();
+				.headers((headers) -> headers.remove(JoseHeaderNames.CRIT))
+				.encode().getTokenValue();
 	}
 }

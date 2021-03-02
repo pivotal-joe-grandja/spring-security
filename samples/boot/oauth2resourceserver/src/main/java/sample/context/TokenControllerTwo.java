@@ -20,26 +20,26 @@ import java.util.function.Consumer;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.jwt.JoseHeaderNames;
-import org.springframework.security.oauth2.jwt.JwtEncoderAlternative.JwtPartial;
-import org.springframework.security.oauth2.jwt.NimbusJwtEncoderAlternative;
+import org.springframework.security.oauth2.jwt.JwtBuilderFactory.JwtBuilder;
+import org.springframework.security.oauth2.jwt.NimbusJwtBuilderFactory;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class TokenControllerTwo {
 	@Autowired
-	NimbusJwtEncoderAlternative<TenantSecurityContext> jwsEncoder;
+	NimbusJwtBuilderFactory<TenantSecurityContext> jwsEncoder;
 
 	@Autowired
-	Consumer<JwtPartial<?>> jwsCustomizer;
+	Consumer<JwtBuilder<?>> jwsCustomizer;
 
 	@GetMapping("/token/two")
 	String tokenTwo() {
-		return this.jwsEncoder.signer()
+		return this.jwsEncoder.create()
 				.apply(this.jwsCustomizer)
 				.claimsSet((claims) -> claims.id("id"))
-				.jwsHeaders((headers) -> headers.remove(JoseHeaderNames.CRIT))
+				.headers((headers) -> headers.remove(JoseHeaderNames.CRIT))
 				.securityContext(new TenantSecurityContext("subdomain"))
-				.sign().getTokenValue();
+				.encode().getTokenValue();
 	}
 }

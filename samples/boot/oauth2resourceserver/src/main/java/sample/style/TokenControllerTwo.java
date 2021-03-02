@@ -21,7 +21,7 @@ import java.util.function.Consumer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.jwt.JoseHeader;
 import org.springframework.security.oauth2.jwt.JoseHeaderNames;
-import org.springframework.security.oauth2.jwt.JwtEncoderAlternative;
+import org.springframework.security.oauth2.jwt.JwtBuilderFactory;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,7 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class TokenControllerTwo {
 	@Autowired
-	JwtEncoderAlternative jwtEncoderAlternative;
+	JwtBuilderFactory jwtBuilderFactory;
 
 	@Autowired
 	Consumer<JoseHeader.Builder> defaultHeader;
@@ -39,11 +39,11 @@ public class TokenControllerTwo {
 
 	@GetMapping("/token/two")
 	String tokenTwo() {
-		return this.jwtEncoderAlternative.signer()
-				.jwsHeader(this.defaultHeader)
-				.jwsHeaders((headers) -> headers.remove(JoseHeaderNames.CRIT))
+		return this.jwtBuilderFactory.create()
+				.joseHeader(this.defaultHeader)
+				.headers((headers) -> headers.remove(JoseHeaderNames.CRIT))
 				.claimsSet(this.defaultClaimsSet)
 				.claimsSet((claims) -> claims.id("id"))
-				.sign().getTokenValue();
+				.encode().getTokenValue();
 	}
 }

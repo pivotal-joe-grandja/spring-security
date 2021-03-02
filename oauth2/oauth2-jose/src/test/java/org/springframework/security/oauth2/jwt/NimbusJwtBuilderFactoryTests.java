@@ -42,16 +42,16 @@ import static org.mockito.Mockito.verify;
  *
  * @author Joe Grandja
  */
-public class NimbusJwtEncoderAlternativeTests {
+public class NimbusJwtBuilderFactoryTests {
 
 	private JWKSource<SecurityContext> jwkSelector;
 
-	private NimbusJwtEncoderAlternative<SecurityContext> jwsEncoder;
+	private NimbusJwtBuilderFactory<SecurityContext> jwsEncoder;
 
 	@Before
 	public void setUp() {
 		this.jwkSelector = mock(JWKSource.class);
-		this.jwsEncoder = new NimbusJwtEncoderAlternative<>();
+		this.jwsEncoder = new NimbusJwtBuilderFactory<>();
 		this.jwsEncoder.setJwkSource(this.jwkSelector);
 	}
 
@@ -63,7 +63,7 @@ public class NimbusJwtEncoderAlternativeTests {
 
 	@Test
 	public void encodeWhenJwkNotSelectedThenThrowJwtEncodingException() {
-		assertThatExceptionOfType(JwtEncodingException.class).isThrownBy(() -> this.jwsEncoder.signer().sign())
+		assertThatExceptionOfType(JwtEncodingException.class).isThrownBy(() -> this.jwsEncoder.create().encode())
 				.withMessageContaining("Failed to select a JWK signing key");
 	}
 
@@ -79,7 +79,7 @@ public class NimbusJwtEncoderAlternativeTests {
 
 		given(this.jwkSelector.get(any(), any())).willReturn(Arrays.asList(rsaJwk));
 
-		assertThatExceptionOfType(JwtEncodingException.class).isThrownBy(() -> this.jwsEncoder.signer().sign())
+		assertThatExceptionOfType(JwtEncodingException.class).isThrownBy(() -> this.jwsEncoder.create().encode())
 				.withMessageContaining(
 						"Failed to create a JWS Signer -> The JWK use must be sig (signature) or unspecified");
 	}
@@ -95,7 +95,7 @@ public class NimbusJwtEncoderAlternativeTests {
 
 		given(this.jwkSelector.get(any(), any())).willReturn(Arrays.asList(rsaJwk));
 
-		Jwt encodedJws = this.jwsEncoder.signer().sign();
+		Jwt encodedJws = this.jwsEncoder.create().encode();
 
 		// Assert headers/claims were added
 		assertThat(encodedJws.getHeaders().get(JoseHeaderNames.TYP)).isEqualTo("JWT");
@@ -117,11 +117,11 @@ public class NimbusJwtEncoderAlternativeTests {
 
 		given(this.jwkSelector.get(any(), any())).willReturn(Arrays.asList(rsaJwk));
 
-		Consumer<JwtEncoderAlternative.JwtPartial<?>> jwtCustomizer = mock(Consumer.class);
-		JwtEncoderAlternative encoder = () -> this.jwsEncoder.signer().apply(jwtCustomizer);
-		encoder.signer().sign();
+		Consumer<JwtBuilderFactory.JwtBuilder<?>> jwtCustomizer = mock(Consumer.class);
+		JwtBuilderFactory encoder = () -> this.jwsEncoder.create().apply(jwtCustomizer);
+		encoder.create().encode();
 
-		verify(jwtCustomizer).accept(any(JwtEncoderAlternative.JwtPartial.class));
+		verify(jwtCustomizer).accept(any(JwtBuilderFactory.JwtBuilder.class));
 	}
 
 	@Test
@@ -135,7 +135,7 @@ public class NimbusJwtEncoderAlternativeTests {
 
 		given(this.jwkSelector.get(any(), any())).willReturn(Arrays.asList(rsaJwk, rsaJwk));
 
-		assertThatExceptionOfType(JwtEncodingException.class).isThrownBy(() -> this.jwsEncoder.signer().sign())
+		assertThatExceptionOfType(JwtEncodingException.class).isThrownBy(() -> this.jwsEncoder.create().encode())
 				.withMessageContaining("Found multiple JWK signing keys for algorithm 'RS256'");
 	}
 
@@ -154,7 +154,7 @@ public class NimbusJwtEncoderAlternativeTests {
 
 		given(this.jwkSelector.get(any(), any())).willReturn(Arrays.asList(first));
 
-		Jwt encodedJws = this.jwsEncoder.signer().sign();
+		Jwt encodedJws = this.jwsEncoder.create().encode();
 
 		NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withPublicKey((first).toRSAPublicKey()).build();
 		Jwt firstDecoded = jwtDecoder.decode(encodedJws.getTokenValue());
@@ -162,7 +162,7 @@ public class NimbusJwtEncoderAlternativeTests {
 		reset(this.jwkSelector);
 		given(this.jwkSelector.get(any(), any())).willReturn(Arrays.asList(second));
 
-		encodedJws = this.jwsEncoder.signer().sign();
+		encodedJws = this.jwsEncoder.create().encode();
 
 		jwtDecoder = NimbusJwtDecoder.withPublicKey((second).toRSAPublicKey()).build();
 		Jwt secondDecoded = jwtDecoder.decode(encodedJws.getTokenValue());
@@ -182,8 +182,8 @@ public class NimbusJwtEncoderAlternativeTests {
 
 		given(this.jwkSelector.get(any(), any())).willReturn(Arrays.asList(rsaJwk));
 
-		Jwt encodedJws = this.jwsEncoder.signer()
-				.claimsSet((claims) -> claims.subject("subject")).sign();
+		Jwt encodedJws = this.jwsEncoder.create()
+				.claimsSet((claims) -> claims.subject("subject")).encode();
 
 		NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withPublicKey(rsaJwk.toRSAPublicKey()).build();
 		Jwt decoded = jwtDecoder.decode(encodedJws.getTokenValue());
@@ -202,9 +202,9 @@ public class NimbusJwtEncoderAlternativeTests {
 
 		given(this.jwkSelector.get(any(), any())).willReturn(Arrays.asList(rsaJwk));
 
-		Jwt encodedJws = this.jwsEncoder.signer()
+		Jwt encodedJws = this.jwsEncoder.create()
 				.claims((claims) -> claims.remove("exp"))
-				.claimsSet((claims) -> claims.subject("subject")).sign();
+				.claimsSet((claims) -> claims.subject("subject")).encode();
 
 		NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withPublicKey(rsaJwk.toRSAPublicKey()).build();
 		Jwt decoded = jwtDecoder.decode(encodedJws.getTokenValue());

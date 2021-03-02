@@ -50,7 +50,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-public class NimbusJwtEncoderAlternative<C extends SecurityContext> implements JwtEncoderAlternative {
+public class NimbusJwtBuilderFactory<C extends SecurityContext> implements JwtBuilderFactory {
 	private JWKSource<C> jwksSource;
 
 	public void setJwkSource(JWKSource<C> jwksSource) {
@@ -59,13 +59,13 @@ public class NimbusJwtEncoderAlternative<C extends SecurityContext> implements J
 	}
 
 	@Override
-	public NimbusJwtPartial<C> signer() {
-		return new NimbusJwtPartial<>(this.jwksSource)
-				.jwsHeader((headers) -> headers.algorithm(SignatureAlgorithm.RS256).type("JWT"))
+	public NimbusJwtBuilder<C> create() {
+		return new NimbusJwtBuilder<>(this.jwksSource)
+				.joseHeader((headers) -> headers.algorithm(SignatureAlgorithm.RS256).type("JWT"))
 				.claimsSet((claims) -> claims.id(UUID.randomUUID().toString()));
 	}
 
-	public static final class NimbusJwtPartial<C extends SecurityContext> extends JwtPartialSupport<NimbusJwtPartial<C>> implements JwtPartial<NimbusJwtPartial<C>> {
+	public static final class NimbusJwtBuilder<C extends SecurityContext> extends JwtBuilderSupport<NimbusJwtBuilder<C>> implements JwtBuilder<NimbusJwtBuilder<C>> {
 		private static final String ENCODING_ERROR_MESSAGE_TEMPLATE = "An error occurred while attempting to encode the Jwt: %s";
 
 		private static final Converter<JoseHeader, JWSHeader> JWS_HEADER_CONVERTER = new JwsHeaderConverter();
@@ -81,11 +81,11 @@ public class NimbusJwtEncoderAlternative<C extends SecurityContext> implements J
 		private JWK jwk;
 		private C context;
 
-		private NimbusJwtPartial(JWKSource<C> jwkSource) {
+		private NimbusJwtBuilder(JWKSource<C> jwkSource) {
 			this.jwkSource = jwkSource;
 		}
 
-		public NimbusJwtPartial<C> jwk(JWK jwk) {
+		public NimbusJwtBuilder<C> jwk(JWK jwk) {
 			this.jwk = jwk;
 			if (this.jwk.getKeyID() != null) {
 				this.headers.keyId(this.jwk.getKeyID());
@@ -96,13 +96,13 @@ public class NimbusJwtEncoderAlternative<C extends SecurityContext> implements J
 			return this;
 		}
 
-		public NimbusJwtPartial<C> securityContext(C context) {
+		public NimbusJwtBuilder<C> securityContext(C context) {
 			this.context = context;
 			return this;
 		}
 
 		@Override
-		public Jwt sign() {
+		public Jwt encode() {
 			if (this.jwk == null) {
 				this.headers.headers((header) -> jwk(selectJwk(header)));
 			}

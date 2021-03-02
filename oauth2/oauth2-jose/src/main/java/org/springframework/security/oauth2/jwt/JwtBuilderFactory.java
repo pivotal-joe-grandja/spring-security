@@ -22,33 +22,33 @@ import java.util.function.Consumer;
 /**
  * A factory for signing JWS payloads
  */
-public interface JwtEncoderAlternative {
+public interface JwtBuilderFactory {
 
 	/**
 	 * Return a signer that can be configured for signing payloads
 	 * @return a configurable signer
 	 */
-	JwtPartial<?> signer();
+	JwtBuilder<?> create();
 
-	interface JwtPartial<B extends JwtPartial<B>> {
-		B jwsHeaders(Consumer<Map<String, Object>> headersConsumer); // calling this jwsHeaders means we can add jweHeaders later, removing the ambiguity in the contract
+	interface JwtBuilder<B extends JwtBuilder<B>> {
+		B headers(Consumer<Map<String, Object>> headersConsumer); // calling this jwsHeaders means we can add jweHeaders later, removing the ambiguity in the contract
 		B claims(Consumer<Map<String, Object>> claimsConsumer);
-		B jwsHeader(Consumer<JoseHeader.Builder> headerConsumer);
-		B claimsSet(Consumer<JwtClaimsSet.Builder> claimsSetConsumer);
-		Jwt sign();
+		B joseHeader(Consumer<JoseHeader.Builder> headersConsumer);
+		B claimsSet(Consumer<JwtClaimsSet.Builder> claimsConsumer);
+		Jwt encode();
 
-		default B apply(Consumer<JwtPartial<?>> consumer) {
-			consumer.accept(this);
+		default B apply(Consumer<JwtBuilder<?>> builderConsumer) {
+			builderConsumer.accept(this);
 			return (B) this;
 		}
 	}
 
-	abstract class JwtPartialSupport<B extends JwtPartialSupport<B>> implements JwtPartial<B> {
+	abstract class JwtBuilderSupport<B extends JwtBuilderSupport<B>> implements JwtBuilder<B> {
 		protected final JoseHeader.Builder headers = JoseHeader.builder();
 		protected final JwtClaimsSet.Builder claims = JwtClaimsSet.builder();
 
 		@Override
-		public B jwsHeader(Consumer<JoseHeader.Builder> headersConsumer) {
+		public B joseHeader(Consumer<JoseHeader.Builder> headersConsumer) {
 			headersConsumer.accept(this.headers);
 			return (B) this;
 		}
@@ -60,7 +60,7 @@ public interface JwtEncoderAlternative {
 		}
 
 		@Override
-		public B jwsHeaders(Consumer<Map<String, Object>> headersConsumer) {
+		public B headers(Consumer<Map<String, Object>> headersConsumer) {
 			this.headers.headers(headersConsumer);
 			return (B) this;
 		}

@@ -19,11 +19,11 @@ package org.springframework.security.oauth2.jwt;
 import java.time.Instant;
 import java.util.function.Consumer;
 
-public class JwtTimestampApplier implements Consumer<JwtEncoderAlternative.JwtPartial<?>> {
+public class JwtTimestampApplier implements Consumer<JwtBuilderFactory.JwtBuilder<?>> {
 	@Override
-	public void accept(JwtEncoderAlternative.JwtPartial<?> jwtPartial) {
+	public void accept(JwtBuilderFactory.JwtBuilder<?> jwtBuilder) {
 		Instant now = Instant.now();
-		jwtPartial.claimsSet((claims) -> claims
+		jwtBuilder.claimsSet((claims) -> claims
 				.issuedAt(now)
 				.expiresAt(now.plusSeconds(3600))
 				.notBefore(now));
