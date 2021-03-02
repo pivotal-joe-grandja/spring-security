@@ -30,13 +30,61 @@ public interface JwtBuilderFactory {
 	 */
 	JwtBuilder<?> create();
 
+	/*
+	 * JG:
+	 * 1) This design does not allow the use of Lambda's since it's not a @FunctionalInterface.
+	 * 	JwtEncoder.encode() allows the usage of Lambda's.
+	 * 2) JwtBuilder.headers() and JwtBuilder.joseHeader() cannot be overloaded since the signature would be the same.
+	 *	It's not ideal that the operation name needs to be different. This also applies for claims().
+	 * 3) This builder is similar to Jwt.Builder. This will confuse user's.
+	 * 	Which one should they use? Do we deprecate Jwt.Builder?
+	 * 4) The only difference between JwtBuilder and JwtEncoder
+	 * is that JwtBuilder provides customization hooks for headers and claims via the Consumer's.
+	 * Alternatively, the headers and claims can be customized via JoseHeader.Builder and JwtClaimsSet.Builder
+	 * and then passed into JwtEncoder for encoding ONLY. So customization happens BEFORE the encoding process.
+	 * IMO, this makes the JwtEncoder API much simpler and defines the JoseHeader and JwtClaimsSet
+	 * as first-class (JWT/JOSE) domain objects with their associated builders that allow for customization.
+	 * 5) The JwtBuilderFactory API introduces 3 public API's: JwtBuilderFactory, JwtBuilder and JwtBuilderSupport.
+	 * 	Whereas, JwtEncoder introduces 1 public API.
+	 * 	NOTE: JoseHeader and JwtClaimsSet are shared by both API designs.
+	 */
 	interface JwtBuilder<B extends JwtBuilder<B>> {
-		B headers(Consumer<Map<String, Object>> headersConsumer); // calling this jwsHeaders means we can add jweHeaders later, removing the ambiguity in the contract
+		// calling this jwsHeaders means we can add jweHeaders later,
+		// removing the ambiguity in the contract
+		B headers(Consumer<Map<String, Object>> headersConsumer);
+
+		// JG:
+		// Consumer<Map<String, Object>> does not provide type-safety for headers or claims,
+		// the preference is to use Consumer<JoseHeader.Builder> and Consumer<JwtClaimsSet.Builder>.
+		// This also makes the API easier to use since the standard headers and claims are defined in the builders
+		// and it also allows for custom headers and claims to be added.
 		B claims(Consumer<Map<String, Object>> claimsConsumer);
+
+		// JG:
+		// In reply to above comment in headers(Consumer<Map<String, Object>>),
+		// JoseHeader is designed to be used for Jwe as well,
+		// e.g. JoseHeader.Builder.header() can be used to add ANY header - JWS, JWE or custom
+		// I don't see any ambiguity in the contract
 		B joseHeader(Consumer<JoseHeader.Builder> headersConsumer);
+
 		B claimsSet(Consumer<JwtClaimsSet.Builder> claimsConsumer);
+
+		// JG:
+		// encode() used to be sign() before I renamed, however, both names are confusing since this is a Builder.
+		// I would expect it to be build() instead.
+		// Even if we kept it as sign(), then how do we handle JWE?
+		// Logically, we would have encrypt() for JWE but this introduces a new operation.
+		// Hence the generic name JwtEncoder.encode(), as it provides the flexibility
+		// to handle both JWS or JWE based on the implementation.
+		// I guess we could rename this to build() but I prefer encode()
+		// as this is the "core operation" being performed.
+		// It's encoding the headers and claims. It's not really building headers and claims.
+		// This name also aligns with JwtDecoder.decode().
 		Jwt encode();
 
+		// JG:
+		// I don't feel we need to introduce this.
+		// The caller has access to the headers and claims via the Consumer operations.
 		default B apply(Consumer<JwtBuilder<?>> builderConsumer) {
 			builderConsumer.accept(this);
 			return (B) this;

@@ -32,8 +32,16 @@ public class TokenConfigTwo {
 	@Bean
 	JwtBuilderFactory jwsBuilderFactory(RSAKey key) {
 		NimbusJwtBuilderFactory<?> delegate = new NimbusJwtBuilderFactory<>();
+		// JG:
+		// 1) The NimbusJwtBuilderFactory has a null JWKSource,
+		// 	which in turn uses the null JWKSource to create the NimbusJwtBuilder?
+		// 2) This factory creates a new instance of NimbusJwtBuilder on each invocation?
+		// 	Is this intended? NimbusJwtBuilder is a heavy-weight object - see notes in NimbusJwtBuilder
 		return () -> delegate.create()
 				.jwk(key) // simple to specify the key since I can expose Nimbus-specific methods when returning a builder
+				// JG:
+				// jwk() is implementation specific and not part of the core contract of JwtBuilderFactory
+				// Also see the note in NimbusJwtBuilderFactory.NimbusJwtBuilder.jwk()
 				.claimsSet((claims) -> claims.issuer("http://self"))
 				.joseHeader((headers) -> headers.critical(Collections.singleton("exp"))) // application-level opinion that might need overriding
 				.apply(new JwtTimestampApplier())

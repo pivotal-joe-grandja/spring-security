@@ -60,11 +60,24 @@ public class NimbusJwtBuilderFactory<C extends SecurityContext> implements JwtBu
 
 	@Override
 	public NimbusJwtBuilder<C> create() {
+		// JG:
+		// I realize this is an implementation detail but this.jwksSource could be null
 		return new NimbusJwtBuilder<>(this.jwksSource)
 				.joseHeader((headers) -> headers.algorithm(SignatureAlgorithm.RS256).type("JWT"))
 				.claimsSet((claims) -> claims.id(UUID.randomUUID().toString()));
 	}
 
+	// JG:
+	// 1) This implementation of JwtBuilder is NOT thread-safe.
+	// 	The headers and claims in super (JwtBuilderSupport) can only be used on a per-request basis.
+	// 	For example, after the first caller customizes the headers and claims, the 2nd caller will
+	// 	start off where the first caller left off, and so on...
+	//	NOTE: The JwtEncoder API promotes thread-safety given that the per-request data
+	//	is supplied via it's input arguments JoseHeader and JwtClaimsSet.
+	// 2) This is a "heavy-weight" object that will be costly to garbage collect
+	// 	given the members jwsSigners, jwkSource, jwk, context.
+	// 3) It's not clear to me where the source key comes from?
+	// 	There are 3 potential sources: jwkSource, jwk, context. Too many choices could lead to confusion.
 	public static final class NimbusJwtBuilder<C extends SecurityContext> extends JwtBuilderSupport<NimbusJwtBuilder<C>> implements JwtBuilder<NimbusJwtBuilder<C>> {
 		private static final String ENCODING_ERROR_MESSAGE_TEMPLATE = "An error occurred while attempting to encode the Jwt: %s";
 
@@ -85,6 +98,10 @@ public class NimbusJwtBuilderFactory<C extends SecurityContext> implements JwtBu
 			this.jwkSource = jwkSource;
 		}
 
+		// JG:
+		// I could set JWKSource in the factory and also set an individual JWK in this builder.
+		// Why not keep it consistent and only allow for JWKSource?
+		// Another implementation detail but this would simplify from a user perspective.
 		public NimbusJwtBuilder<C> jwk(JWK jwk) {
 			this.jwk = jwk;
 			if (this.jwk.getKeyID() != null) {

@@ -42,6 +42,13 @@ public class TokenConfigOne {
 	JwtEncoder jwtEncoder(RSAKey key) {
 		JWKSource<SecurityContext> jwks = new ImmutableJWKSet<>(new JWKSet(key));
 		NimbusJwsEncoder delegate = new NimbusJwsEncoder(jwks);
+
+		// JG:
+		// This lambda implementation of JwtEncoder is NOT actually a JwtEncoder type.
+		// It does NOT perform encoding, which is the responsibility of the JwtEncoder, as documented in the API.
+		// Instead, this lambda implementation performs headers and claims customization,
+		// which IMO should be a separate concern that is handled by another component, e.g. jwtCustomizer.
+		// I don't feel this is a valid sample and I would consider it an anti-pattern.
 		return (headers, claims) -> {
 			JoseHeader.Builder defaultHeaders = JoseHeader.from(headers);
 			if (!headers.getHeaders().containsKey(JoseHeaderNames.CRIT)) { // can't tell if caller wants `crit` to not be in the header or wants to take the encoder's opinion
