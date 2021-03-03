@@ -19,7 +19,6 @@ package sample.singlekey;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.UUID;
-import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 import com.nimbusds.jose.jwk.JWKSet;
@@ -42,27 +41,24 @@ public class TokenConfigOne {
 
 	@Bean
 	public Supplier<JoseHeader.Builder> defaultHeader() {
-		return () -> JoseHeader.builder().algorithm(SignatureAlgorithm.RS256).type("JWT");
+		return () ->
+				JoseHeader.builder()
+					.algorithm(SignatureAlgorithm.RS256)
+					.type("JWT")
+					.critical(Collections.singleton("exp"));	// application-level opinion that might need overriding
 	}
 
 	@Bean
 	public Supplier<JwtClaimsSet.Builder> defaultClaimsSet() {
-		return () -> JwtClaimsSet.builder().id(UUID.randomUUID().toString());
-	}
-
-	@Bean
-	public BiConsumer<JoseHeader.Builder, JwtClaimsSet.Builder> jwtCustomizer() {
-		return (headers, claims) -> {
-			headers
-				.critical(Collections.singleton("exp"));	// application-level opinion that might need overriding
-
+		return () -> {
 			Instant now = Instant.now();
-			claims
-				.issuedAt(now)
-				.expiresAt(now.plusSeconds(3600))
-				.notBefore(now)
-				.issuer("http://self")
-				.subject(SecurityContextHolder.getContext().getAuthentication().getName());
+			return JwtClaimsSet.builder()
+					.issuedAt(now)
+					.expiresAt(now.plusSeconds(3600))
+					.notBefore(now)
+					.issuer("http://self")
+					.subject(SecurityContextHolder.getContext().getAuthentication().getName())
+					.id(UUID.randomUUID().toString());
 		};
 	}
 

@@ -16,7 +16,6 @@
 
 package sample.singlekey;
 
-import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,17 +38,11 @@ public class TokenControllerOne {
 	@Autowired
 	Supplier<JwtClaimsSet.Builder> defaultClaimsSet;
 
-	@Autowired
-	BiConsumer<JoseHeader.Builder, JwtClaimsSet.Builder> jwtCustomizer;
-
 	@GetMapping("/token/one")
 	String tokenOne() {
 		// Obtain application-scope defaults
 		JoseHeader.Builder headersBuilder = this.defaultHeader.get();
 		JwtClaimsSet.Builder claimsBuilder = this.defaultClaimsSet.get();
-
-		// Apply application-scope headers/claims customization
-		this.jwtCustomizer.accept(headersBuilder, claimsBuilder);
 
 		// Apply request-scope headers/claims customization
 		headersBuilder.headers((headers) -> headers.remove(JoseHeaderNames.CRIT));
