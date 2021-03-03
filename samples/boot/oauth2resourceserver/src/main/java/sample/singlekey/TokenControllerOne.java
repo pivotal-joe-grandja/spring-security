@@ -16,11 +16,13 @@
 
 package sample.singlekey;
 
+import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.oauth2.jwt.JoseHeader;
 import org.springframework.security.oauth2.jwt.JoseHeaderNames;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,10 +39,25 @@ public class TokenControllerOne {
 	@Autowired
 	Supplier<JwtClaimsSet.Builder> defaultClaimsSet;
 
+	@Autowired
+	BiConsumer<JoseHeader.Builder, JwtClaimsSet.Builder> jwtCustomizer;
+
 	@GetMapping("/token/one")
 	String tokenOne() {
-		return this.jwtEncoder.encode(
-				this.defaultHeader.get().headers((header) -> header.remove(JoseHeaderNames.CRIT)).build(),
-				this.defaultClaimsSet.get().id("id").build()).getTokenValue();
+		// Obtain application-scope defaults
+		JoseHeader.Builder headersBuilder = this.defaultHeader.get();
+		JwtClaimsSet.Builder claimsBuilder = this.defaultClaimsSet.get();
+
+		// Apply application-scope headers/claims customization
+		this.jwtCustomizer.accept(headersBuilder, claimsBuilder);
+
+		// Apply request-scope headers/claims customization
+		headersBuilder.headers((headers) -> headers.remove(JoseHeaderNames.CRIT));
+		claimsBuilder.id("id");
+
+		// Encode after headers/claims customization
+		Jwt jwt = this.jwtEncoder.encode(headersBuilder.build(), claimsBuilder.build());
+
+		return jwt.getTokenValue();
 	}
 }
