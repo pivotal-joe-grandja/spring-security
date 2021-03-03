@@ -50,34 +50,20 @@ public class TokenConfigOne {
 		return () -> JwtClaimsSet.builder().id(UUID.randomUUID().toString());
 	}
 
-	@Bean("jwtCustomizer")
-	public BiConsumer<JoseHeader.Builder, JwtClaimsSet.Builder> jwtCustomizerChain() {
-		return jwtCustomizer1().andThen(jwtCustomizer2()).andThen(jwtCustomizer3());
-	}
-
 	@Bean
-	public BiConsumer<JoseHeader.Builder, JwtClaimsSet.Builder> jwtCustomizer1() {
+	public BiConsumer<JoseHeader.Builder, JwtClaimsSet.Builder> jwtCustomizer() {
 		return (headers, claims) -> {
-			headers.critical(Collections.singleton("exp"));	// application-level opinion that might need overriding
-			claims.issuer("http://self");
-		};
-	}
+			headers
+				.critical(Collections.singleton("exp"));	// application-level opinion that might need overriding
 
-	@Bean
-	public BiConsumer<JoseHeader.Builder, JwtClaimsSet.Builder> jwtCustomizer2() {
-		return (headers, claims) -> {
 			Instant now = Instant.now();
 			claims
 				.issuedAt(now)
 				.expiresAt(now.plusSeconds(3600))
-				.notBefore(now);
+				.notBefore(now)
+				.issuer("http://self")
+				.subject(SecurityContextHolder.getContext().getAuthentication().getName());
 		};
-	}
-
-	@Bean
-	public BiConsumer<JoseHeader.Builder, JwtClaimsSet.Builder> jwtCustomizer3() {
-		return (headers, claims) ->
-				claims.subject(SecurityContextHolder.getContext().getAuthentication().getName());
 	}
 
 	@Bean
