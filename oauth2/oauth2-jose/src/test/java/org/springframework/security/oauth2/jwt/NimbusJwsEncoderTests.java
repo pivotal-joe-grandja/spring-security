@@ -132,24 +132,6 @@ public class NimbusJwsEncoderTests {
 	}
 
 	@Test
-	public void encodeWhenJwkKidNullThenThrowJwtEncodingException() throws Exception {
-		// @formatter:off
-		RSAKey rsaJwk = TestJwks.jwk(TestKeys.DEFAULT_PUBLIC_KEY, TestKeys.DEFAULT_PRIVATE_KEY)
-				.keyID(null)
-				.build();
-		// @formatter:on
-
-		this.jwkList.add(rsaJwk);
-
-		JoseHeader joseHeader = JoseHeader.withAlgorithm(SignatureAlgorithm.RS256).build();
-		JwtClaimsSet jwtClaimsSet = TestJwtClaimsSets.jwtClaimsSet().build();
-
-		assertThatExceptionOfType(JwtEncodingException.class)
-				.isThrownBy(() -> this.jwsEncoder.encode(joseHeader, jwtClaimsSet))
-				.withMessageContaining("The \"kid\" (key ID) from the selected JWK cannot be empty");
-	}
-
-	@Test
 	public void encodeWhenJwkUseEncryptionThenThrowJwtEncodingException() throws Exception {
 		// @formatter:off
 		RSAKey rsaJwk = TestJwks.jwk(TestKeys.DEFAULT_PUBLIC_KEY, TestKeys.DEFAULT_PRIVATE_KEY)

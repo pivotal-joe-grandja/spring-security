@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -106,12 +107,9 @@ public final class NimbusJwsEncoder implements JwtEncoder {
 			throw new JwtEncodingException(
 					String.format(ENCODING_ERROR_MESSAGE_TEMPLATE, "Failed to select a JWK signing key"));
 		}
-		else if (!StringUtils.hasText(jwk.getKeyID())) {
-			throw new JwtEncodingException(String.format(ENCODING_ERROR_MESSAGE_TEMPLATE,
-					"The \"kid\" (key ID) from the selected JWK cannot be empty"));
-		}
 
-		headers = JoseHeader.from(headers).keyId(jwk.getKeyID()).build();
+		jwsHeader = addKeyIdentifierHeadersIfNecessary(jwsHeader, jwk);
+		headers = syncKeyIdentifierHeadersIfNecessary(headers, jwsHeader);
 
 		JWTClaimsSet jwtClaimsSet = JWT_CLAIMS_SET_CONVERTER.convert(claims);
 
@@ -156,6 +154,52 @@ public final class NimbusJwsEncoder implements JwtEncoder {
 		}
 
 		return !jwks.isEmpty() ? jwks.get(0) : null;
+	}
+
+	private static JWSHeader addKeyIdentifierHeadersIfNecessary(JWSHeader jwsHeader, JWK jwk) {
+		// Check if headers have already been added
+		if (StringUtils.hasText(jwsHeader.getKeyID()) &&
+				jwsHeader.getX509CertSHA256Thumbprint() != null) {
+			return jwsHeader;
+		}
+		// Check if headers can be added from JWK
+		if (!StringUtils.hasText(jwk.getKeyID()) &&
+				jwk.getX509CertSHA256Thumbprint() == null) {
+			return jwsHeader;
+		}
+
+		JWSHeader.Builder headerBuilder = new JWSHeader.Builder(jwsHeader);
+		if (!StringUtils.hasText(jwsHeader.getKeyID()) &&
+				StringUtils.hasText(jwk.getKeyID())) {
+			headerBuilder.keyID(jwk.getKeyID());
+		}
+		if (jwsHeader.getX509CertSHA256Thumbprint() == null &&
+				jwk.getX509CertSHA256Thumbprint() != null) {
+			headerBuilder.x509CertSHA256Thumbprint(jwk.getX509CertSHA256Thumbprint());
+		}
+
+		return headerBuilder.build();
+	}
+
+	private static JoseHeader syncKeyIdentifierHeadersIfNecessary(JoseHeader joseHeader, JWSHeader jwsHeader) {
+		String jwsHeaderX509SHA256Thumbprint = null;
+		if (jwsHeader.getX509CertSHA256Thumbprint() != null) {
+			jwsHeaderX509SHA256Thumbprint = jwsHeader.getX509CertSHA256Thumbprint().toString();
+		}
+		if (Objects.equals(joseHeader.getKeyId(), jwsHeader.getKeyID()) &&
+				Objects.equals(joseHeader.getX509SHA256Thumbprint(), jwsHeaderX509SHA256Thumbprint)) {
+			return joseHeader;
+		}
+
+		JoseHeader.Builder headerBuilder = JoseHeader.from(joseHeader);
+		if (!Objects.equals(joseHeader.getKeyId(), jwsHeader.getKeyID())) {
+			headerBuilder.keyId(jwsHeader.getKeyID());
+		}
+		if (!Objects.equals(joseHeader.getX509SHA256Thumbprint(), jwsHeaderX509SHA256Thumbprint)) {
+			headerBuilder.x509SHA256Thumbprint(jwsHeaderX509SHA256Thumbprint);
+		}
+
+		return headerBuilder.build();
 	}
 
 	private static class JwsHeaderConverter implements Converter<JoseHeader, JWSHeader> {
