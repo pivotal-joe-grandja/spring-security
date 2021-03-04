@@ -22,7 +22,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -110,15 +109,7 @@ public final class NimbusJwsEncoder implements JwtEncoder {
 					"The \"kid\" (key ID) from the selected JWK cannot be empty"));
 		}
 
-		// @formatter:off
-		headers = JoseHeader.from(headers)
-				.type(JOSEObjectType.JWT.getType())
-				.keyId(jwk.getKeyID())
-				.build();
-		claims = JwtClaimsSet.from(claims)
-				.id(UUID.randomUUID().toString())
-				.build();
-		// @formatter:on
+		headers = JoseHeader.from(headers).keyId(jwk.getKeyID()).build();
 
 		JWSHeader jwsHeader = JWS_HEADER_CONVERTER.convert(headers);
 		JWTClaimsSet jwtClaimsSet = JWT_CLAIMS_SET_CONVERTER.convert(claims);
