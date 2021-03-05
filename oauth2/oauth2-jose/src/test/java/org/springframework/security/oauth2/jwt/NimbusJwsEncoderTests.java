@@ -40,6 +40,7 @@ import org.mockito.stubbing.Answer;
 
 import org.springframework.security.oauth2.jose.TestJwks;
 import org.springframework.security.oauth2.jose.TestKeys;
+import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
@@ -86,7 +87,7 @@ public class NimbusJwsEncoderTests {
 
 	@Test
 	public void encodeWhenClaimsNullThenThrowIllegalArgumentException() {
-		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
+		JoseHeader joseHeader = JoseHeader.withAlgorithm(SignatureAlgorithm.RS256).build();
 
 		assertThatIllegalArgumentException().isThrownBy(() -> this.jwsEncoder.encode(joseHeader, null))
 				.withMessage("claims cannot be null");
@@ -98,7 +99,7 @@ public class NimbusJwsEncoderTests {
 		this.jwsEncoder = new NimbusJwsEncoder(this.jwkSource);
 		given(this.jwkSource.get(any(), any())).willThrow(new KeySourceException("key source error"));
 
-		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
+		JoseHeader joseHeader = JoseHeader.withAlgorithm(SignatureAlgorithm.RS256).build();
 		JwtClaimsSet jwtClaimsSet = TestJwtClaimsSets.jwtClaimsSet().build();
 
 		assertThatExceptionOfType(JwtEncodingException.class)
@@ -112,7 +113,7 @@ public class NimbusJwsEncoderTests {
 		this.jwkList.add(rsaJwk);
 		this.jwkList.add(rsaJwk);
 
-		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
+		JoseHeader joseHeader = JoseHeader.withAlgorithm(SignatureAlgorithm.RS256).build();
 		JwtClaimsSet jwtClaimsSet = TestJwtClaimsSets.jwtClaimsSet().build();
 
 		assertThatExceptionOfType(JwtEncodingException.class)
@@ -122,7 +123,7 @@ public class NimbusJwsEncoderTests {
 
 	@Test
 	public void encodeWhenJwkSelectEmptyThenThrowJwtEncodingException() {
-		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
+		JoseHeader joseHeader = JoseHeader.withAlgorithm(SignatureAlgorithm.RS256).build();
 		JwtClaimsSet jwtClaimsSet = TestJwtClaimsSets.jwtClaimsSet().build();
 
 		assertThatExceptionOfType(JwtEncodingException.class)
@@ -140,7 +141,7 @@ public class NimbusJwsEncoderTests {
 
 		this.jwkList.add(rsaJwk);
 
-		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
+		JoseHeader joseHeader = JoseHeader.withAlgorithm(SignatureAlgorithm.RS256).build();
 		JwtClaimsSet jwtClaimsSet = TestJwtClaimsSets.jwtClaimsSet().build();
 
 		assertThatExceptionOfType(JwtEncodingException.class)
@@ -160,7 +161,7 @@ public class NimbusJwsEncoderTests {
 		this.jwsEncoder = new NimbusJwsEncoder(this.jwkSource);
 		given(this.jwkSource.get(any(), any())).willReturn(Collections.singletonList(rsaJwk));
 
-		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
+		JoseHeader joseHeader = JoseHeader.withAlgorithm(SignatureAlgorithm.RS256).build();
 		JwtClaimsSet jwtClaimsSet = TestJwtClaimsSets.jwtClaimsSet().build();
 
 		assertThatExceptionOfType(JwtEncodingException.class)
@@ -173,15 +174,13 @@ public class NimbusJwsEncoderTests {
 		RSAKey rsaJwk = TestJwks.DEFAULT_RSA_JWK;
 		this.jwkList.add(rsaJwk);
 
-		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
+		JoseHeader joseHeader = JoseHeader.withAlgorithm(SignatureAlgorithm.RS256).build();
 		JwtClaimsSet jwtClaimsSet = TestJwtClaimsSets.jwtClaimsSet().build();
 
 		Jwt encodedJws = this.jwsEncoder.encode(joseHeader, jwtClaimsSet);
 
-		// Assert headers/claims were added
-		assertThat(encodedJws.getHeaders().get(JoseHeaderNames.TYP)).isEqualTo("JWT");
 		assertThat(encodedJws.getHeaders().get(JoseHeaderNames.KID)).isEqualTo(rsaJwk.getKeyID());
-		assertThat(encodedJws.getId()).isNotNull();
+		assertThat(encodedJws.getId()).isEqualTo(jwtClaimsSet.getId());
 
 		NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withPublicKey(rsaJwk.toRSAPublicKey()).build();
 		jwtDecoder.decode(encodedJws.getTokenValue());
@@ -201,7 +200,7 @@ public class NimbusJwsEncoderTests {
 		JwkListResultCaptor jwkListResultCaptor = new JwkListResultCaptor();
 		willAnswer(jwkListResultCaptor).given(jwkSourceDelegate).get(any(), any());
 
-		JoseHeader joseHeader = TestJoseHeaders.joseHeader().build();
+		JoseHeader joseHeader = JoseHeader.withAlgorithm(SignatureAlgorithm.RS256).build();
 		JwtClaimsSet jwtClaimsSet = TestJwtClaimsSets.jwtClaimsSet().build();
 
 		Jwt encodedJws = jwsEncoder.encode(joseHeader, jwtClaimsSet);

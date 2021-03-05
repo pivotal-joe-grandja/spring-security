@@ -99,7 +99,9 @@ public final class NimbusJwsEncoder implements JwtEncoder {
 		Assert.notNull(headers, "headers cannot be null");
 		Assert.notNull(claims, "claims cannot be null");
 
-		JWK jwk = selectJwk(headers);
+		JWSHeader jwsHeader = JWS_HEADER_CONVERTER.convert(headers);
+
+		JWK jwk = selectJwk(jwsHeader);
 		if (jwk == null) {
 			throw new JwtEncodingException(
 					String.format(ENCODING_ERROR_MESSAGE_TEMPLATE, "Failed to select a JWK signing key"));
@@ -111,7 +113,6 @@ public final class NimbusJwsEncoder implements JwtEncoder {
 
 		headers = JoseHeader.from(headers).keyId(jwk.getKeyID()).build();
 
-		JWSHeader jwsHeader = JWS_HEADER_CONVERTER.convert(headers);
 		JWTClaimsSet jwtClaimsSet = JWT_CLAIMS_SET_CONVERTER.convert(claims);
 
 		JWSSigner jwsSigner = this.jwsSigners.computeIfAbsent(jwk, (key) -> {
@@ -137,9 +138,7 @@ public final class NimbusJwsEncoder implements JwtEncoder {
 		return new Jwt(jws, claims.getIssuedAt(), claims.getExpiresAt(), headers.getHeaders(), claims.getClaims());
 	}
 
-	private JWK selectJwk(JoseHeader headers) {
-		JWSAlgorithm jwsAlgorithm = JWSAlgorithm.parse(headers.getAlgorithm().getName());
-		JWSHeader jwsHeader = new JWSHeader(jwsAlgorithm);
+	private JWK selectJwk(JWSHeader jwsHeader) {
 		JWKSelector jwkSelector = new JWKSelector(JWKMatcher.forJWSHeader(jwsHeader));
 
 		List<JWK> jwks;
@@ -153,7 +152,7 @@ public final class NimbusJwsEncoder implements JwtEncoder {
 
 		if (jwks.size() > 1) {
 			throw new JwtEncodingException(String.format(ENCODING_ERROR_MESSAGE_TEMPLATE,
-					"Found multiple JWK signing keys for algorithm '" + jwsAlgorithm.getName() + "'"));
+					"Found multiple JWK signing keys for algorithm '" + jwsHeader.getAlgorithm().getName() + "'"));
 		}
 
 		return !jwks.isEmpty() ? jwks.get(0) : null;
