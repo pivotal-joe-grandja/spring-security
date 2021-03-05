@@ -17,7 +17,6 @@
 package sample.style;
 
 import java.time.Instant;
-import java.util.Collections;
 
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -49,7 +48,12 @@ public class TokenConfigOne {
 		// Instead, this lambda implementation performs headers and claims customization,
 		// which IMO should be a separate concern that is handled by another component, e.g. jwtCustomizer.
 		// I don't feel this is a valid sample and I would consider it an anti-pattern.
-		return (headers, claims) -> {
+		return (headers, payload) -> {
+			// FIXME
+			// Resolve type of Payload.content
+			// For now, assuming JwtClaimsSet type
+			JwtClaimsSet claims = (JwtClaimsSet) payload.getContent();
+
 			JoseHeader.Builder defaultHeaders = JoseHeader.from(headers);
 			if (!headers.getHeaders().containsKey(JoseHeaderNames.CRIT)) { // can't tell if caller wants `crit` to not be in the header or wants to take the encoder's opinion
 				// JG:

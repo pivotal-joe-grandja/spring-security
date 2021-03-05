@@ -89,8 +89,8 @@ public class NimbusJwsEncoderTests {
 	public void encodeWhenClaimsNullThenThrowIllegalArgumentException() {
 		JoseHeader joseHeader = JoseHeader.withAlgorithm(SignatureAlgorithm.RS256).build();
 
-		assertThatIllegalArgumentException().isThrownBy(() -> this.jwsEncoder.encode(joseHeader, null))
-				.withMessage("claims cannot be null");
+		assertThatIllegalArgumentException().isThrownBy(() -> this.jwsEncoder.encode(joseHeader, (JwtClaimsSet) null))
+				.withMessage("content cannot be null");
 	}
 
 	@Test

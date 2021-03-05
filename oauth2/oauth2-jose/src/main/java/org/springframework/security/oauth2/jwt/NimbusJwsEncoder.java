@@ -96,9 +96,9 @@ public final class NimbusJwsEncoder implements JwtEncoder {
 	}
 
 	@Override
-	public Jwt encode(JoseHeader headers, JwtClaimsSet claims) throws JwtEncodingException {
+	public Jwt encode(JoseHeader headers, Payload<?> payload) throws JwtEncodingException {
 		Assert.notNull(headers, "headers cannot be null");
-		Assert.notNull(claims, "claims cannot be null");
+		Assert.notNull(payload, "payload cannot be null");
 
 		JWSHeader jwsHeader = JWS_HEADER_CONVERTER.convert(headers);
 
@@ -110,6 +110,11 @@ public final class NimbusJwsEncoder implements JwtEncoder {
 
 		jwsHeader = addKeyIdentifierHeadersIfNecessary(jwsHeader, jwk);
 		headers = syncKeyIdentifierHeadersIfNecessary(headers, jwsHeader);
+
+		// FIXME
+		// Resolve type of Payload.content
+		// For now, assuming JwtClaimsSet type
+		JwtClaimsSet claims = (JwtClaimsSet) payload.getContent();
 
 		JWTClaimsSet jwtClaimsSet = JWT_CLAIMS_SET_CONVERTER.convert(claims);
 

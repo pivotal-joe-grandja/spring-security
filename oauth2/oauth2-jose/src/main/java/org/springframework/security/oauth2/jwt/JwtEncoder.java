@@ -16,6 +16,8 @@
 
 package org.springframework.security.oauth2.jwt;
 
+import org.springframework.util.Assert;
+
 /**
  * Implementations of this interface are responsible for encoding a JSON Web Token (JWT)
  * to it's compact claims representation format.
@@ -54,6 +56,42 @@ public interface JwtEncoder {
 	 * @return a {@link Jwt}
 	 * @throws JwtEncodingException if an error occurs while attempting to encode the JWT
 	 */
-	Jwt encode(JoseHeader headers, JwtClaimsSet claims) throws JwtEncodingException;
+	default Jwt encode(JoseHeader headers, JwtClaimsSet claims) throws JwtEncodingException {
+		return encode(headers, new Payload<>(claims));
+	}
 
+	/*
+	 * This new operation demonstrates how we can grow the API
+	 * to support a payload with different data type(s).
+	 *
+	 * NOTE:
+	 * This DOES NOT break the existing contract,
+	 * and simply shows how we can grow it to support this feature at a later point (when needed).
+	 *
+	 * One example, that we'll likely need to support is the "Nested JWS in JWE" use case.
+	 * See test -> NimbusJweEncoderTests.encodeWhenPayloadNestedJwsThenEncodes()
+	 *
+	 * The primary advantage for using the `Payload` (wrapper) type
+	 * is that it provides us the greatest flexibility to sign/encrypt ANY data type,
+	 * whether it's a JwtClaimsSet, String, byte[], Jwt, etc.
+	 */
+	Jwt encode(JoseHeader headers, Payload<?> payload) throws JwtEncodingException;
+
+	/*
+	 * NOTE:
+	 * Payload is defined here just to demonstrate
+	 * but it may be extracted into it's own (outer) class.
+	 */
+	class Payload<T> {
+		T content;
+
+		public Payload(T content) {
+			Assert.notNull(content, "content cannot be null");
+			this.content = content;
+		}
+
+		public T getContent() {
+			return content;
+		}
+	}
 }

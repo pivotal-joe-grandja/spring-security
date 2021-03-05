@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.security.oauth2.jose.jwe;
+package org.springframework.security.oauth2.jwt;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,13 +29,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import org.springframework.security.oauth2.jose.TestJwks;
+import org.springframework.security.oauth2.jose.jwe.JweAlgorithm;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
-import org.springframework.security.oauth2.jwt.JoseHeader;
-import org.springframework.security.oauth2.jwt.JoseHeaderNames;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtClaimsSet;
-import org.springframework.security.oauth2.jwt.NimbusJwsEncoder;
-import org.springframework.security.oauth2.jwt.TestJwtClaimsSets;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -99,7 +94,8 @@ public class NimbusJweEncoderTests {
 				.contentType("JWT")
 				.build();
 
-		Jwt encodedJweNestedJws = this.jweEncoder.encode(jweHeader, encodedJws.getTokenValue());
+		Jwt encodedJweNestedJws = this.jweEncoder.encode(
+				jweHeader, new JwtEncoder.Payload<>(encodedJws.getTokenValue()));
 
 		assertThat(encodedJweNestedJws.getHeaders().get(JoseHeaderNames.ALG)).isEqualTo(JweAlgorithm.RSA_OAEP_256);
 		assertThat(encodedJweNestedJws.getHeaders().get("enc")).isEqualTo(EncryptionMethod.A256GCM.getName());

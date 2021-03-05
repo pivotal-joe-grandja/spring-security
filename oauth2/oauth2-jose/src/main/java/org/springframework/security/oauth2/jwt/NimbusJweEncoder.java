@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.springframework.security.oauth2.jose.jwe;
+package org.springframework.security.oauth2.jwt;
 
 import java.net.URL;
 import java.time.Instant;
@@ -34,7 +34,6 @@ import com.nimbusds.jose.JWEHeader;
 import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.KeySourceException;
-import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKMatcher;
@@ -46,11 +45,6 @@ import com.nimbusds.jose.util.Base64URL;
 import com.nimbusds.jwt.JWTClaimsSet;
 
 import org.springframework.core.convert.converter.Converter;
-import org.springframework.security.oauth2.jwt.JoseHeader;
-import org.springframework.security.oauth2.jwt.JoseHeaderNames;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtClaimsSet;
-import org.springframework.security.oauth2.jwt.JwtEncodingException;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -58,7 +52,7 @@ import org.springframework.util.StringUtils;
 /**
  * @author Joe Grandja
  */
-public final class NimbusJweEncoder implements JweEncoder {
+public final class NimbusJweEncoder implements JwtEncoder {
 
 	private static final String ENCODING_ERROR_MESSAGE_TEMPLATE = "An error occurred while attempting to encode the Jwt: %s";
 
@@ -79,16 +73,16 @@ public final class NimbusJweEncoder implements JweEncoder {
 		Assert.notNull(claims, "claims cannot be null");
 
 		JWTClaimsSet jwtClaimsSet = JWT_CLAIMS_SET_CONVERTER.convert(claims);
-		Jwt jwe = encode(headers, jwtClaimsSet.toString());
+		Jwt jwe = encode(headers, new Payload<>(jwtClaimsSet.toString()));
 
 		return new Jwt(jwe.getTokenValue(), claims.getIssuedAt(), claims.getExpiresAt(), jwe.getHeaders(),
 				claims.getClaims());
 	}
 
 	@Override
-	public Jwt encode(JoseHeader headers, String content) throws JwtEncodingException {
+	public Jwt encode(JoseHeader headers, Payload<?> payload) throws JwtEncodingException {
 		Assert.notNull(headers, "headers cannot be null");
-		Assert.hasText(content, "content cannot be empty");
+		Assert.notNull(payload, "payload cannot be null");
 
 		JWEHeader jweHeader = JWE_HEADER_CONVERTER.convert(headers);
 
@@ -101,7 +95,12 @@ public final class NimbusJweEncoder implements JweEncoder {
 		jweHeader = addKeyIdentifierHeadersIfNecessary(jweHeader, jwk);
 		headers = syncKeyIdentifierHeadersIfNecessary(headers, jweHeader);
 
-		JWEObject jweObject = new JWEObject(jweHeader, new Payload(content));
+		// FIXME
+		// Resolve type of Payload.content
+		// For now, assuming String type
+		String content = (String) payload.getContent();
+
+		JWEObject jweObject = new JWEObject(jweHeader, new com.nimbusds.jose.Payload(content));
 		try {
 			// FIXME
 			// Resolve the JWEEncrypter based on the JWK key type
