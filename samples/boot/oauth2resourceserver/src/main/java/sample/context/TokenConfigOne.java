@@ -65,6 +65,19 @@ public class TokenConfigOne {
 
 	@Bean
 	JwtEncoder jwtEncoder(RSAKey key) {
+		// JG:
+		// The tests in SecurityContextApplicationTests fail because
+		// NimbusJwsEncoder does not support TenantSecurityContext.
+		// NOTE: NimbusJwsEncoder passes null for SecurityContext.
+		// There are other more generic ways to support multi-tenancy instead
+		// of using Nimbus's SecurityContext.
+		// For example, let's assume NimbusJwsEncoder (or a varied implementation)
+		// has the following member -> Map<String, JWKSource> - the key holds the tenant id.
+		// Let's also assume the custom header for tenant id is `tenantId`.
+		// The caller would set the `tenantId` header in the JoseHeader,
+		// which would allow NimbusJwsEncoder to lookup the JWKSource for the tenant.
+		// The added benefit here is that the `tenantId` header
+		// would be carried through to the encoded JWS.
 		return new NimbusJwsEncoder(new TenantJwkSource(key));
 	}
 
