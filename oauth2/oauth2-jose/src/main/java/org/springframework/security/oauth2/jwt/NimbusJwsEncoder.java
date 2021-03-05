@@ -158,23 +158,19 @@ public final class NimbusJwsEncoder implements JwtEncoder {
 
 	private static JWSHeader addKeyIdentifierHeadersIfNecessary(JWSHeader jwsHeader, JWK jwk) {
 		// Check if headers have already been added
-		if (StringUtils.hasText(jwsHeader.getKeyID()) &&
-				jwsHeader.getX509CertSHA256Thumbprint() != null) {
+		if (StringUtils.hasText(jwsHeader.getKeyID()) && jwsHeader.getX509CertSHA256Thumbprint() != null) {
 			return jwsHeader;
 		}
 		// Check if headers can be added from JWK
-		if (!StringUtils.hasText(jwk.getKeyID()) &&
-				jwk.getX509CertSHA256Thumbprint() == null) {
+		if (!StringUtils.hasText(jwk.getKeyID()) && jwk.getX509CertSHA256Thumbprint() == null) {
 			return jwsHeader;
 		}
 
 		JWSHeader.Builder headerBuilder = new JWSHeader.Builder(jwsHeader);
-		if (!StringUtils.hasText(jwsHeader.getKeyID()) &&
-				StringUtils.hasText(jwk.getKeyID())) {
+		if (!StringUtils.hasText(jwsHeader.getKeyID()) && StringUtils.hasText(jwk.getKeyID())) {
 			headerBuilder.keyID(jwk.getKeyID());
 		}
-		if (jwsHeader.getX509CertSHA256Thumbprint() == null &&
-				jwk.getX509CertSHA256Thumbprint() != null) {
+		if (jwsHeader.getX509CertSHA256Thumbprint() == null && jwk.getX509CertSHA256Thumbprint() != null) {
 			headerBuilder.x509CertSHA256Thumbprint(jwk.getX509CertSHA256Thumbprint());
 		}
 
@@ -186,8 +182,8 @@ public final class NimbusJwsEncoder implements JwtEncoder {
 		if (jwsHeader.getX509CertSHA256Thumbprint() != null) {
 			jwsHeaderX509SHA256Thumbprint = jwsHeader.getX509CertSHA256Thumbprint().toString();
 		}
-		if (Objects.equals(joseHeader.getKeyId(), jwsHeader.getKeyID()) &&
-				Objects.equals(joseHeader.getX509SHA256Thumbprint(), jwsHeaderX509SHA256Thumbprint)) {
+		if (Objects.equals(joseHeader.getKeyId(), jwsHeader.getKeyID())
+				&& Objects.equals(joseHeader.getX509SHA256Thumbprint(), jwsHeaderX509SHA256Thumbprint)) {
 			return joseHeader;
 		}
 
