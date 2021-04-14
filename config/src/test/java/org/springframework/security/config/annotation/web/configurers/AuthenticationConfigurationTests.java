@@ -21,6 +21,7 @@ import org.junit.Test;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -30,6 +31,8 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.util.matcher.RequestHeaderRequestMatcher;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -103,6 +106,17 @@ public class AuthenticationConfigurationTests {
 	@Test
 	public void oauth2LoginHttpBasic_requestWhenXHRNotAuthenticatedThenUnauthorized() throws Exception {
 		this.spring.register(OAuth2LoginHttpBasicConfig.class).autowire();
+
+		// @formatter:off
+		this.mvc.perform(get("/")
+				.header("X-Requested-With", "XMLHttpRequest"))
+				.andExpect(status().isUnauthorized());
+		// @formatter:on
+	}
+
+	@Test
+	public void oauth2LoginXHREntryPoint_requestWhenXHRNotAuthenticatedThenUnauthorized() throws Exception {
+		this.spring.register(OAuth2LoginXHREntryPointConfig.class).autowire();
 
 		// @formatter:off
 		this.mvc.perform(get("/")
@@ -206,6 +220,39 @@ public class AuthenticationConfigurationTests {
 							oauth2Login
 									.clientRegistrationRepository(clientRegistrationRepository()))
 					.httpBasic(Customizer.withDefaults())
+					.build();
+		}
+		// @formatter:on
+
+		@Bean
+		ClientRegistrationRepository clientRegistrationRepository() {
+			return new InMemoryClientRegistrationRepository(GOOGLE_REGISTRATION);
+		}
+
+	}
+
+	@EnableWebSecurity
+	static class OAuth2LoginXHREntryPointConfig {
+
+		// @formatter:off
+		@Bean
+		SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+			return http
+					.authorizeRequests((authorizeRequests) ->
+							authorizeRequests
+									.anyRequest().authenticated()
+					)
+					.oauth2Login((oauth2Login) ->
+							oauth2Login
+									.clientRegistrationRepository(clientRegistrationRepository())
+					)
+					.exceptionHandling((exceptionHandling) ->
+							exceptionHandling
+									.defaultAuthenticationEntryPointFor(
+											new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+											new RequestHeaderRequestMatcher("X-Requested-With", "XMLHttpRequest")
+									)
+					)
 					.build();
 		}
 		// @formatter:on
